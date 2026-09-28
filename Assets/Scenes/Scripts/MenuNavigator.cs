@@ -102,12 +102,14 @@ public class MenuNavigator : MonoBehaviour
                 if (newIndex < options.Length)
                 {
                     currentIndex = newIndex;
+                    SoundFX.Move();
                     UpdateSelection();
                 }
             }
 
             if (Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(KeyCode.Return))
             {
+                SoundFX.Confirm();
                 string selected = options[currentIndex].text;
                 if (battleBox != null)
                 {

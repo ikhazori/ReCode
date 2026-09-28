@@ -75,12 +75,14 @@ public class LevelRunner : MonoBehaviour
                 break;
             }
 
+            SoundFX.Step();
             yield return MoveTo(from, level.CellToWorld(next), stepDuration);
             currentCell = next;
         }
 
         if (crashed)
         {
+            SoundFX.Crash();
             if (effects != null) yield return effects.PlayCrashEffect();
         }
         else if (currentCell == level.GoalCell)
@@ -89,6 +91,7 @@ public class LevelRunner : MonoBehaviour
             OnLevelComplete?.Invoke();
 
             // Destello verde suave de victoria
+            SoundFX.Win();
             if (effects != null) yield return effects.PlayWinEffect();
 
             if (dialogue != null)

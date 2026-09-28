@@ -43,18 +43,44 @@ public class DialogueController : MonoBehaviour
     [Tooltip("Si esta marcado, el personaje se va deslizandose al terminar el dialogo.")]
     public bool characterExits = true;
 
+    [Header("Musica de fondo")]
+    [Tooltip("Cancion que suena en bucle cuando aparece el personaje.")]
+    public AudioClip music;
+    [Range(0f, 1f)] public float musicVolume = 0.5f;
+    [Tooltip("Segundos que tarda el volumen en subir al empezar (0 = de golpe).")]
+    public float musicFadeIn = 1f;
+    [Tooltip("Si esta marcado, la musica se apaga suavemente cuando el personaje se va (es 'su tema'). Si no, sigue sonando en bucle.")]
+    public bool stopMusicWhenGuideLeaves = true;
+    [Tooltip("Segundos que tarda la musica en apagarse cuando el personaje se va.")]
+    public float musicFadeOut = 0.8f;
+
     private AudioSource audioSource;
+    private AudioSource musicSource;
+    private Coroutine musicRoutine;
 
     void Awake()
     {
         if (battleBox == null) battleBox = FindFirstObjectByType<BattleBoxController>();
+
+        if (music != null)
+        {
+            musicSource = gameObject.AddComponent<AudioSource>();
+            musicSource.clip = music;
+            musicSource.loop = true;
+            musicSource.playOnAwake = false;
+            musicSource.volume = 0f;
+        }
 
         if (blipSound != null)
         {
             audioSource = gameObject.AddComponent<AudioSource>();
             audioSource.playOnAwake = false;
         }
-        if (character != null) character.gameObject.SetActive(false);
+        if (character != null)
+        {
+            if (character.GetComponent<GuideIdle>() == null) character.gameObject.AddComponent<GuideIdle>();
+            character.gameObject.SetActive(false);
+        }
     }
 
     /// <summary>Corre la secuencia completa de dialogo de victoria (usalo con yield return).</summary>
@@ -71,6 +97,7 @@ public class DialogueController : MonoBehaviour
         float offscreenX = GetOffscreenX();
         character.anchoredPosition = new Vector2(offscreenX, characterPosition.y);
         character.gameObject.SetActive(true);
+        StartMusic(); // aparece el personaje -> empieza la musica
         yield return Slide(offscreenX, characterPosition.x);
 
         // 2. El cuadro se cierra, cambia a modo mensaje y se abre
@@ -86,6 +113,7 @@ public class DialogueController : MonoBehaviour
         }
 
         // 4. El cuadro se cierra y vuelve a las opciones; el personaje se va
+        if (stopMusicWhenGuideLeaves) StopMusic();
         yield return battleBox.CloseBox();
         battleBox.ShowOptionsContent();
         if (characterExits)
@@ -94,6 +122,46 @@ public class DialogueController : MonoBehaviour
         }
         character.gameObject.SetActive(false);
         yield return battleBox.OpenBox();
+    }
+
+    // ---------- Musica de fondo ----------
+
+    private void StartMusic()
+    {
+        if (musicSource == null) return;
+        if (musicRoutine != null) StopCoroutine(musicRoutine);
+        if (!musicSource.isPlaying)
+        {
+            musicSource.volume = 0f;
+            musicSource.Play();
+        }
+        musicRoutine = StartCoroutine(FadeMusic(musicVolume, musicFadeIn));
+    }
+
+    private void StopMusic()
+    {
+        if (musicSource == null || !musicSource.isPlaying) return;
+        if (musicRoutine != null) StopCoroutine(musicRoutine);
+        musicRoutine = StartCoroutine(FadeOutAndStop());
+    }
+
+    private IEnumerator FadeOutAndStop()
+    {
+        yield return FadeMusic(0f, musicFadeOut);
+        musicSource.Stop();
+    }
+
+    private IEnumerator FadeMusic(float target, float duration)
+    {
+        float start = musicSource.volume;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            musicSource.volume = Mathf.Lerp(start, target, t / duration);
+            yield return null;
+        }
+        musicSource.volume = target;
     }
 
     private IEnumerator TypeLine(string line)
@@ -166,7 +234,7 @@ public class DialogueController : MonoBehaviour
 
     private void PlayBlip()
     {
-        if (audioSource == null || blipSound == null) return;
+        if (audioSource == null || blipSound == null) { SoundFX.Blip(); return; }
         audioSource.pitch = Random.Range(0.95f, 1.05f);
         audioSource.PlayOneShot(blipSound, blipVolume);
     }

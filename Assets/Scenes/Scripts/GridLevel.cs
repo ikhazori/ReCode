@@ -31,6 +31,7 @@ public class GridLevel : MonoBehaviour
 
     private char[,] cells;
     private Transform visualsRoot;
+    private SpriteRenderer goalRenderer;
     private static Sprite squareSprite;
     private static Sprite circleSprite;
 
@@ -75,11 +76,13 @@ public class GridLevel : MonoBehaviour
                 // Borde verde de la casilla + relleno encima
                 CreateSprite("Line", parent, GetSquare(), pos, cellSize, lineColor, 0);
                 Color fill = ch == 'G' ? goalColor : (ch == '#' ? wallColor : cellColor);
-                CreateSprite("Cell", parent, GetSquare(), pos, cellSize - 0.06f, fill, 1);
+                GameObject cellGo = CreateSprite("Cell", parent, GetSquare(), pos, cellSize - 0.06f, fill, 1);
+                if (ch == 'G') goalRenderer = cellGo.GetComponent<SpriteRenderer>();
             }
         }
 
         GameObject player = CreateSprite("Player", parent, GetCircle(), CellToWorld(StartCell), cellSize * 0.7f, playerColor, 10);
+        player.AddComponent<PlayerFX>();
         Player = player.transform;
     }
 
@@ -94,6 +97,14 @@ public class GridLevel : MonoBehaviour
         sr.color = color;
         sr.sortingOrder = order;
         return go;
+    }
+
+    // La meta pulsa suavemente hacia el blanco
+    void Update()
+    {
+        if (goalRenderer == null) return;
+        float k = (Mathf.Sin(Time.time * 3f) + 1f) / 2f;
+        goalRenderer.color = Color.Lerp(goalColor, Color.white, k * 0.35f);
     }
 
     // ---------- Utilidades que usa el Runner ----------

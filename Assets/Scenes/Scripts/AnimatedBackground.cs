@@ -5,7 +5,7 @@ using UnityEngine.UI;
 /// Fondo animado por codigo: un tablero de cuadros que se desplaza en diagonal y
 /// "respira" (brillo que sube y baja). No necesita imagenes ni prefabs.
 /// Ponlo en cualquier objeto de la escena (por ejemplo "Level") y dale Play.
-/// Se crea como primer hijo del Canvas, o sea, detras de todo.
+/// Crea su propio Canvas (detras de los sprites del mundo, como la cuadricula).
 /// </summary>
 public class AnimatedBackground : MonoBehaviour
 {
@@ -23,6 +23,9 @@ public class AnimatedBackground : MonoBehaviour
     public float pulseSpeed = 0.8f;
     [Range(0f, 0.5f)] public float pulseAmount = 0.15f;
 
+    [Header("Lluvia de 0 y 1 (tema code)")]
+    public bool binaryRain = true;
+
     [Header("Margen extra (para que el temblor de ScreenEffects no muestre bordes)")]
     public float bleed = 40f;
 
@@ -32,7 +35,15 @@ public class AnimatedBackground : MonoBehaviour
 
     void Awake()
     {
-        Canvas canvas = FindFirstObjectByType<Canvas>();
+        // Canvas propio, dibujado POR el Main Camera y con orden -100: queda detras de los
+        // sprites del mundo (la cuadricula), mientras el Canvas normal sigue encima de todo.
+        Camera cam = Camera.main != null ? Camera.main : FindFirstObjectByType<Camera>();
+        GameObject canvasGo = new GameObject("BackgroundCanvas", typeof(Canvas));
+        Canvas canvas = canvasGo.GetComponent<Canvas>();
+        canvas.renderMode = RenderMode.ScreenSpaceCamera;
+        canvas.worldCamera = cam;
+        canvas.planeDistance = 100f;
+        canvas.sortingOrder = -100;
 
         GameObject go = new GameObject("AnimatedBackground", typeof(RectTransform), typeof(RawImage));
         go.transform.SetParent(canvas.transform, false);
@@ -47,6 +58,8 @@ public class AnimatedBackground : MonoBehaviour
         raw = go.GetComponent<RawImage>();
         raw.raycastTarget = false;
         raw.texture = BuildCheckerTexture();
+
+        if (binaryRain) BinaryRain.Create(canvas.transform, 1); // justo encima del fondo
     }
 
     void Update()
