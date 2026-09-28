@@ -25,6 +25,10 @@ public class PlayerFX : MonoBehaviour
     private float trailTimer;
     private float stretch;
     private bool horizontal = true;
+    private float celebrateT = -1f;
+
+    /// <summary>Pequeño rebote de alegria (lo llama GridLevel al ganar).</summary>
+    public void Celebrate() { celebrateT = 0f; }
 
     void Awake()
     {
@@ -61,12 +65,22 @@ public class PlayerFX : MonoBehaviour
             trailTimer = trailInterval;
         }
 
+        float pop = 0f;
+        if (celebrateT >= 0f)
+        {
+            celebrateT += dt;
+            const float life = 1f;
+            if (celebrateT >= life) celebrateT = -1f;
+            else pop = Mathf.Sin(celebrateT * Mathf.PI * 6f) * 0.25f * (1f - celebrateT / life);
+        }
+
         float idle = stretch < 0.01f ? Mathf.Sin(Time.time * 3f) * idleBreathe : 0f;
         float along = 1f + stretch + idle;
         float across = 1f / along;
-        transform.localScale = horizontal
+        Vector3 sc = horizontal
             ? new Vector3(baseScale.x * along, baseScale.y * across, 1f)
             : new Vector3(baseScale.x * across, baseScale.y * along, 1f);
+        transform.localScale = new Vector3(sc.x * (1f + pop), sc.y * (1f + pop), 1f);
     }
 
     private void SpawnGhost()

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// Efecto de "choque": destello rojo en toda la pantalla + temblor de la camara
@@ -29,6 +30,11 @@ public class ScreenEffects : MonoBehaviour
     [Tooltip("Cuanto dura el destello (segundos). Sube y baja suavemente, una sola vez.")]
     public float winDuration = 1.2f;
     [Range(0f, 1f)] public float winMaxAlpha = 0.35f;
+    [Tooltip("Texto grande que salta al centro al ganar (vacio = sin texto).")]
+    public string winText = "¡NIVEL COMPLETADO!";
+    public float winTextSize = 30f;
+    [Tooltip("Posicion vertical del texto (0 = centro de la pantalla).")]
+    public float winTextOffsetY = 40f;
 
     private Image flash;
 
@@ -54,6 +60,26 @@ public class ScreenEffects : MonoBehaviour
     {
         flash.transform.SetAsLastSibling();
 
+        // Texto grande que "salta" al centro y se desvanece al final
+        TextMeshProUGUI label = null;
+        if (!string.IsNullOrEmpty(winText))
+        {
+            GameObject go = new GameObject("WinText", typeof(RectTransform), typeof(TextMeshProUGUI));
+            go.transform.SetParent(canvas.transform, false);
+            label = go.GetComponent<TextMeshProUGUI>();
+            label.text = winText;
+            label.fontSize = winTextSize;
+            label.alignment = TextAlignmentOptions.Center;
+            label.color = Color.white;
+            label.raycastTarget = false;
+            RectTransform lrt = label.rectTransform;
+            lrt.anchorMin = new Vector2(0.5f, 0.5f);
+            lrt.anchorMax = new Vector2(0.5f, 0.5f);
+            lrt.sizeDelta = new Vector2(2000f, 120f);
+            lrt.anchoredPosition = new Vector2(0f, winTextOffsetY);
+            go.transform.SetAsLastSibling(); // por encima del destello
+        }
+
         float t = 0f;
         while (t < winDuration)
         {
@@ -61,10 +87,26 @@ public class ScreenEffects : MonoBehaviour
             float progress = Mathf.Clamp01(t / winDuration);
             float alpha = Mathf.Sin(progress * Mathf.PI) * winMaxAlpha; // curva suave: 0 -> max -> 0
             flash.color = new Color(winColor.r, winColor.g, winColor.b, alpha);
+
+            if (label != null)
+            {
+                float pop = EaseOutBack(Mathf.Clamp01(t / 0.3f));
+                label.rectTransform.localScale = new Vector3(pop, pop, 1f);
+                label.alpha = progress > 0.75f ? (1f - progress) / 0.25f : 1f;
+            }
             yield return null;
         }
 
         flash.color = new Color(winColor.r, winColor.g, winColor.b, 0f);
+        if (label != null) Destroy(label.gameObject);
+    }
+
+    // Curva con "rebote" al final (el texto se pasa un poquito de tamaño y vuelve)
+    private static float EaseOutBack(float x)
+    {
+        const float c1 = 1.70158f;
+        const float c3 = c1 + 1f;
+        return 1f + c3 * Mathf.Pow(x - 1f, 3f) + c1 * Mathf.Pow(x - 1f, 2f);
     }
 
     public IEnumerator PlayCrashEffect()

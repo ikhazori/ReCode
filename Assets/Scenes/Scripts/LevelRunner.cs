@@ -92,7 +92,9 @@ public class LevelRunner : MonoBehaviour
 
             // Destello verde suave de victoria
             SoundFX.Win();
+            Coroutine burst = StartCoroutine(level.PlayWinBurst()); // chispas, anillo y onda en la cuadricula
             if (effects != null) yield return effects.PlayWinEffect();
+            yield return burst;
 
             if (dialogue != null)
             {

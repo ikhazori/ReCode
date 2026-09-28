@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
 using TMPro;
@@ -51,11 +52,25 @@ public class MenuNavigator : MonoBehaviour
 
     void Start()
     {
+        // El corazon se queda oculto hasta saber donde va (evita que aparezca en el lugar equivocado).
+        if (heartIcon != null) heartIcon.gameObject.SetActive(false);
+        StartCoroutine(InitRoutine());
+    }
+
+    // Esperamos un frame para que TextMeshPro ya haya dibujado las letras y podamos medirlas bien.
+    private IEnumerator InitRoutine()
+    {
+        yield return null;
+        Canvas.ForceUpdateCanvases();
+        foreach (TextMeshProUGUI o in options)
+        {
+            if (o != null) o.ForceMeshUpdate();
+        }
         UpdateSelection();
         if (heartIcon != null)
         {
-            // Al empezar, que aparezca ya en su posicion (sin deslizarse desde 0,0)
             heartIcon.anchoredPosition = heartTargetPos;
+            heartIcon.gameObject.SetActive(true);
         }
     }
 
@@ -142,9 +157,12 @@ public class MenuNavigator : MonoBehaviour
         // textBounds refleja el ancho REAL de las letras renderizadas
         // (no el de la caja/contenedor invisible), asi que el corazon
         // queda pegado al texto de verdad sin importar su alineacion.
+        targetText.ForceMeshUpdate();
         Bounds bounds = targetText.textBounds;
         float leftEdgeLocal = bounds.min.x * targetRect.localScale.x;
         float leftEdgeX = targetRect.anchoredPosition.x + leftEdgeLocal;
-        heartTargetPos = new Vector2(leftEdgeX + heartOffsetX, targetRect.anchoredPosition.y + heartOffsetY);
+        Vector2 newTarget = new Vector2(leftEdgeX + heartOffsetX, targetRect.anchoredPosition.y + heartOffsetY);
+        if (float.IsNaN(newTarget.x) || float.IsNaN(newTarget.y)) return;
+        heartTargetPos = newTarget;
     }
 }
