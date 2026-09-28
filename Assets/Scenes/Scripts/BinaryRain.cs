@@ -26,6 +26,9 @@ public class BinaryRain : MonoBehaviour
     private RectTransform area;
     private float columnHeight;
 
+    private bool rewinding;
+    private float rewindSpeedMultiplier = 1f;
+
     /// <summary>Crea el contenedor dentro del Canvas en la posicion de hermano indicada.</summary>
     public static BinaryRain Create(Transform canvas, int siblingIndex)
     {
@@ -80,15 +83,23 @@ public class BinaryRain : MonoBehaviour
 
         float w = area.rect.width;
         float h = area.rect.height;
+        float dir = rewinding ? -1f : 1f;
+        float speedMul = rewinding ? rewindSpeedMultiplier : 1f;
 
         for (int i = 0; i < cols.Length; i++)
         {
             Column c = cols[i];
-            c.y -= c.speed * Time.deltaTime;
+            c.y -= c.speed * speedMul * dir * Time.deltaTime;
 
-            if (c.y < -h) // ya salio por abajo: vuelve a entrar por arriba con otros digitos
+            if (!rewinding && c.y < -h) // ya salio por abajo: vuelve a entrar por arriba con otros digitos
             {
                 c.y = columnHeight + Random.Range(0f, 200f);
+                c.speed = Random.Range(speedRange.x, speedRange.y);
+                c.tmp.text = RandomBits();
+            }
+            else if (rewinding && c.y > columnHeight) // rebobinando: al llegar arriba, reaparece abajo
+            {
+                c.y = -h - Random.Range(0f, 200f);
                 c.speed = Random.Range(speedRange.x, speedRange.y);
                 c.tmp.text = RandomBits();
             }
@@ -96,6 +107,19 @@ public class BinaryRain : MonoBehaviour
             float x = (i + 0.5f) * (w / columns);
             c.rt.anchoredPosition = new Vector2(x, c.y);
         }
+    }
+
+    /// <summary>Los numeros empiezan a subir (en vez de caer) y mas rapido. Usalo junto al rebobinado del fondo.</summary>
+    public void BeginRewind(float speedMultiplier = 2.5f)
+    {
+        rewinding = true;
+        rewindSpeedMultiplier = speedMultiplier;
+    }
+
+    /// <summary>Vuelven a caer normalmente.</summary>
+    public void EndRewind()
+    {
+        rewinding = false;
     }
 
     private string RandomBits()

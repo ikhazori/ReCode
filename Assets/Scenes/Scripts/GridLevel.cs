@@ -10,8 +10,8 @@ using UnityEngine;
 /// </summary>
 public class GridLevel : MonoBehaviour
 {
-    [Header("Mapa (una linea por fila; la primera linea es la de ARRIBA)")]
-    [Tooltip("S = inicio del personaje, G = meta, # = muro, . = casilla libre. Todas las filas deberian tener el mismo largo.")]
+    [Header("Mapa de respaldo (solo se usa si NO hay un LevelManager en la escena)")]
+    [Tooltip("S=inicio, G=meta, #=muro, .=libre, ~=hielo (te deslizas), B=boton (abre/cierra puertas), D=puerta (empieza cerrada), T=teletransportador (se conectan de a pares en orden). Todas las filas deberian tener el mismo largo.")]
     public string[] layout = { "S.......", ".......G", "........" };
 
     [Header("Tamaño y posicion")]
@@ -49,6 +49,26 @@ public class GridLevel : MonoBehaviour
     [Tooltip("Color de la onda que recorre las casillas desde la meta.")]
     public Color waveColor = new Color(0.5f, 1f, 0.6f);
 
+    [Header("Casillas visitadas")]
+    [Tooltip("Si esta marcado, cada casilla por la que pasa el jugador se tiñe para mostrar el camino recorrido.")]
+    public bool markVisitedCells = true;
+    public Color visitedColor = new Color(0f, 0.64f, 0.91f);
+    [Range(0f, 1f)] public float visitedBlend = 0.45f;
+
+    [Header("Casillas especiales")]
+    [Tooltip("~ en el mapa: te deslizas en la misma direccion hasta chocar con algo o salir del hielo.")]
+    public Color iceColor = new Color(0.65f, 0.86f, 1f);
+    [Tooltip("B en el mapa: al pisarlo, abre o cierra TODAS las puertas (D) del nivel.")]
+    public Color buttonColor = new Color(1f, 0.8f, 0.25f);
+    [Tooltip("D en el mapa: empieza cerrada (como un muro) hasta que se presiona un boton.")]
+    public Color doorOpenColor = new Color(0.15f, 0.65f, 0.3f);
+    [Tooltip("T en el mapa: se conectan de a pares, en el orden en que aparecen (el 1er T con el 2do, el 3ro con el 4to, etc).")]
+    public Color teleporterColor = new Color(0.75f, 0.35f, 1f);
+
+    [Header("Efecto de choque (el jugador se hace pedazos)")]
+    public float crashBurstDuration = 0.45f;
+    public int crashFragmentCount = 10;
+
     public int Columns { get; private set; }
     public int Rows { get; private set; }
     public Vector2Int StartCell { get; private set; }
@@ -57,11 +77,25 @@ public class GridLevel : MonoBehaviour
 
     private char[,] cells;
     private Transform visualsRoot;
+    private Transform playerRoot;
     private SpriteRenderer goalRenderer;
     private Transform goalMark;
     private readonly List<SpriteRenderer> startMarks = new List<SpriteRenderer>();
     private SpriteRenderer[,] cellSr;
     private Color[,] cellBase;
+    private SpriteRenderer playerSr;
+    private readonly HashSet<Vector2Int> visitedCells = new HashSet<Vector2Int>();
+    private bool hasExternalManager;
+
+    // Casillas especiales
+    private bool[,] isIce;
+    private bool[,] isButton;
+    private bool[,] isTeleporter;
+    private bool doorsOpen;
+    private readonly List<Vector2Int> doorCells = new List<Vector2Int>();
+    private readonly Dictionary<Vector2Int, SpriteRenderer> buttonIcons = new Dictionary<Vector2Int, SpriteRenderer>();
+    private readonly List<Transform> teleportMarks = new List<Transform>();
+    private readonly Dictionary<Vector2Int, Vector2Int> teleportPairs = new Dictionary<Vector2Int, Vector2Int>();
 
     private static Sprite squareSprite;
     private static Sprite circleSprite;
@@ -69,30 +103,98 @@ public class GridLevel : MonoBehaviour
 
     void Awake()
     {
-        ParseLayout();
-        BuildVisuals();
+        // El jugador vive en su propia raiz, aparte de las casillas: asi se puede
+        // destruir y reconstruir el tablero al cambiar de nivel sin perder al jugador.
+        playerRoot = new GameObject("PlayerRoot").transform;
+        playerRoot.SetParent(transform, false);
+
+        GameObject player = CreateRect("Player", playerRoot, GetCircle(), Vector3.zero, Vector2.one * (cellSize * 0.7f), playerColor, 10);
+        player.AddComponent<PlayerFX>();
+        Player = player.transform;
+        playerSr = player.GetComponent<SpriteRenderer>();
+
+        // Si hay un LevelManager en la escena, es el quien decide que nivel cargar
+        // (lo hace en su propio Start, que corre despues de todos los Awake).
+        hasExternalManager = FindFirstObjectByType<LevelManager>() != null;
     }
 
-    private void ParseLayout()
+    void Start()
     {
-        Rows = layout.Length;
-        Columns = 0;
-        foreach (string row in layout) Columns = Mathf.Max(Columns, row.Length);
-
-        cells = new char[Columns, Rows];
-        for (int r = 0; r < Rows; r++)
+        if (!hasExternalManager)
         {
-            for (int c = 0; c < Columns; c++)
-            {
-                char ch = c < layout[r].Length ? layout[r][c] : '.';
-                if (ch == 'S') { StartCell = new Vector2Int(c, r); ch = '.'; }
-                else if (ch == 'G') { GoalCell = new Vector2Int(c, r); }
-                cells[c, r] = ch;
-            }
+            LoadLevel(new LevelData { name = "Nivel", layout = layout, maxInstructions = 0 });
         }
     }
 
-    private void BuildVisuals()
+    /// <summary>
+    /// Tira el tablero actual y arma uno nuevo a partir de 'data'. El jugador no se
+    /// destruye: solo se reposiciona en el nuevo inicio. Usalo para pasar de nivel.
+    /// </summary>
+    public void LoadLevel(LevelData data)
+    {
+        if (data == null || data.layout == null || data.layout.Length == 0) return;
+
+        if (visualsRoot != null) Destroy(visualsRoot.gameObject);
+
+        visitedCells.Clear();
+        startMarks.Clear();
+        doorCells.Clear();
+        buttonIcons.Clear();
+        teleportMarks.Clear();
+        teleportPairs.Clear();
+        goalRenderer = null;
+        goalMark = null;
+        doorsOpen = false;
+
+        layout = data.layout;
+
+        ParseLayout(data.layout);
+        BuildBoard();
+
+        ResetPlayer();
+        ShowPlayer();
+    }
+
+    private void ParseLayout(string[] lvlLayout)
+    {
+        Rows = lvlLayout.Length;
+        Columns = 0;
+        foreach (string row in lvlLayout) Columns = Mathf.Max(Columns, row?.Length ?? 0);
+
+        cells = new char[Columns, Rows];
+        isIce = new bool[Columns, Rows];
+        isButton = new bool[Columns, Rows];
+        isTeleporter = new bool[Columns, Rows];
+
+        List<Vector2Int> teleporterCells = new List<Vector2Int>();
+
+        for (int r = 0; r < Rows; r++)
+        {
+            string row = lvlLayout[r] ?? "";
+            for (int c = 0; c < Columns; c++)
+            {
+                char ch = c < row.Length ? row[c] : '.';
+
+                if (ch == 'S') { StartCell = new Vector2Int(c, r); ch = '.'; }
+                else if (ch == 'G') { GoalCell = new Vector2Int(c, r); }
+                else if (ch == '~') { isIce[c, r] = true; ch = '.'; }
+                else if (ch == 'B') { isButton[c, r] = true; ch = '.'; }
+                else if (ch == 'T') { isTeleporter[c, r] = true; teleporterCells.Add(new Vector2Int(c, r)); ch = '.'; }
+                // '#' (muro) y 'D' (puerta) se quedan tal cual; el resto queda como '.'
+
+                cells[c, r] = ch;
+            }
+        }
+
+        // Empareja los teletransportadores en el orden en que aparecen: 1o con 2o, 3o con 4o...
+        for (int i = 0; i + 1 < teleporterCells.Count; i += 2)
+        {
+            teleportPairs[teleporterCells[i]] = teleporterCells[i + 1];
+            teleportPairs[teleporterCells[i + 1]] = teleporterCells[i];
+        }
+    }
+
+    private void BuildBoard()
     {
         Transform parent = new GameObject("LevelVisuals").transform;
         parent.SetParent(transform, false);
@@ -120,12 +222,15 @@ public class GridLevel : MonoBehaviour
         {
             for (int c = 0; c < Columns; c++)
             {
-                Vector3 pos = CellToWorld(new Vector2Int(c, r));
+                Vector2Int cellPos = new Vector2Int(c, r);
+                Vector3 pos = CellToWorld(cellPos);
                 char ch = cells[c, r];
 
                 Color fill;
                 if (ch == 'G') fill = goalColor;
                 else if (ch == '#') fill = Color.Lerp(wallColor, Color.black, 0.55f);
+                else if (ch == 'D') fill = doorsOpen ? doorOpenColor : Color.Lerp(wallColor, Color.black, 0.4f);
+                else if (isIce[c, r]) fill = iceColor;
                 else fill = ((c + r) % 2 == 0) ? cellColor : Color.Lerp(cellColor, lineColor, checkerStrength);
 
                 GameObject cellGo = CreateRect("Cell", parent, sq, pos, Vector2.one * inner, fill, 1);
@@ -140,6 +245,18 @@ public class GridLevel : MonoBehaviour
                 {
                     BuildWall(parent, pos);
                 }
+                else if (ch == 'D')
+                {
+                    doorCells.Add(cellPos);
+                }
+                else if (isButton[c, r])
+                {
+                    buttonIcons[cellPos] = BuildButtonIcon(parent, pos);
+                }
+                else if (isTeleporter[c, r])
+                {
+                    teleportMarks.Add(BuildTeleporterIcon(parent, pos));
+                }
                 else if (showCellDots && !(c == StartCell.x && r == StartCell.y))
                 {
                     CreateRect("Dot", parent, sq, pos, Vector2.one * (cellSize * 0.07f),
@@ -150,10 +267,21 @@ public class GridLevel : MonoBehaviour
 
         BuildStartMarker(parent, CellToWorld(StartCell));
         BuildGoalMark(parent, CellToWorld(GoalCell));
+    }
 
-        GameObject player = CreateRect("Player", parent, GetCircle(), CellToWorld(StartCell), Vector2.one * (cellSize * 0.7f), playerColor, 10);
-        player.AddComponent<PlayerFX>();
-        Player = player.transform;
+    // Boton: circulo de color, se enciende un instante cuando se pisa
+    private SpriteRenderer BuildButtonIcon(Transform parent, Vector3 pos)
+    {
+        GameObject go = CreateRect("Button", parent, GetCircle(), pos, Vector2.one * (cellSize * 0.32f), buttonColor, 2);
+        return go.GetComponent<SpriteRenderer>();
+    }
+
+    // Teletransportador: anillo con un puntito en el centro, gira despacio
+    private Transform BuildTeleporterIcon(Transform parent, Vector3 pos)
+    {
+        GameObject outer = CreateRect("Teleporter", parent, GetRing(), pos, Vector2.one * (cellSize * 0.55f), teleporterColor, 2);
+        CreateRect("TeleporterCore", outer.transform, GetCircle(), pos, Vector2.one * (cellSize * 0.16f), teleporterColor, 3);
+        return outer.transform;
     }
 
     // Muro: bloque gris con una "X" oscura (se ve bloqueado)
@@ -241,6 +369,12 @@ public class GridLevel : MonoBehaviour
             Color c = startMarks[i].color;
             c.a = a;
             startMarks[i].color = c;
+        }
+
+        for (int i = 0; i < teleportMarks.Count; i++)
+        {
+            if (teleportMarks[i] != null)
+                teleportMarks[i].rotation = Quaternion.Euler(0f, 0f, t * -70f);
         }
     }
 
@@ -348,18 +482,149 @@ public class GridLevel : MonoBehaviour
 
     public bool IsWalkable(Vector2Int cell)
     {
-        return InBounds(cell) && cells[cell.x, cell.y] != '#';
+        if (!InBounds(cell)) return false;
+        char ch = cells[cell.x, cell.y];
+        if (ch == '#') return false;
+        if (ch == 'D' && !doorsOpen) return false;
+        return true;
+    }
+
+    /// <summary>La casilla es hielo: al entrar en ella, se sigue deslizando en la misma direccion.</summary>
+    public bool IsIce(Vector2Int cell) => InBounds(cell) && isIce[cell.x, cell.y];
+
+    /// <summary>La casilla es un boton: al pisarla, abre o cierra todas las puertas del nivel.</summary>
+    public bool IsButton(Vector2Int cell) => InBounds(cell) && isButton[cell.x, cell.y];
+
+    /// <summary>La casilla es un teletransportador.</summary>
+    public bool IsTeleporter(Vector2Int cell) => InBounds(cell) && isTeleporter[cell.x, cell.y];
+
+    /// <summary>La casilla con la que esta emparejado este teletransportador (o la misma, si no tiene par).</summary>
+    public Vector2Int GetTeleportTarget(Vector2Int cell)
+    {
+        return teleportPairs.TryGetValue(cell, out Vector2Int dest) ? dest : cell;
+    }
+
+    /// <summary>Llamalo cuando el jugador pisa un boton: abre/cierra TODAS las puertas del nivel.</summary>
+    public void PressButton(Vector2Int buttonCell)
+    {
+        doorsOpen = !doorsOpen;
+        foreach (Vector2Int cell in doorCells)
+        {
+            Color fill = doorsOpen ? doorOpenColor : Color.Lerp(wallColor, Color.black, 0.4f);
+            cellBase[cell.x, cell.y] = fill;
+            if (cellSr[cell.x, cell.y] != null) cellSr[cell.x, cell.y].color = fill;
+        }
+
+        if (buttonIcons.TryGetValue(buttonCell, out SpriteRenderer icon) && icon != null)
+        {
+            StartCoroutine(FlashButtonIcon(icon));
+        }
+    }
+
+    private IEnumerator FlashButtonIcon(SpriteRenderer icon)
+    {
+        Color baseColor = icon.color;
+        icon.color = Color.white;
+        float t = 0f;
+        const float dur = 0.2f;
+        while (t < dur)
+        {
+            t += Time.deltaTime;
+            icon.color = Color.Lerp(Color.white, baseColor, t / dur);
+            yield return null;
+        }
+        icon.color = baseColor;
     }
 
     public void ResetPlayer()
     {
-        Player.position = CellToWorld(StartCell);
+        if (Player != null) Player.position = CellToWorld(StartCell);
     }
 
     /// <summary>Muestra u oculta toda la cuadricula y el personaje.</summary>
     public void SetVisible(bool visible)
     {
-        visualsRoot.gameObject.SetActive(visible);
+        if (visualsRoot != null) visualsRoot.gameObject.SetActive(visible);
+        if (playerRoot != null) playerRoot.gameObject.SetActive(visible);
+    }
+
+    // ---------- Casillas visitadas (el "camino" que va dejando el jugador) ----------
+
+    /// <summary>Tiñe la casilla como "ya recorrida". No hace nada si ya estaba marcada o esta fuera del tablero.</summary>
+    public void MarkVisited(Vector2Int cell)
+    {
+        if (!markVisitedCells || !InBounds(cell) || cellSr[cell.x, cell.y] == null) return;
+        if (!visitedCells.Add(cell)) return;
+        cellSr[cell.x, cell.y].color = Color.Lerp(cellBase[cell.x, cell.y], visitedColor, visitedBlend);
+    }
+
+    /// <summary>Le quita la marca a una casilla (la usa el rebobinado al "deshacer" un paso).</summary>
+    public void UnmarkVisited(Vector2Int cell)
+    {
+        if (!InBounds(cell) || !visitedCells.Remove(cell)) return;
+        cellSr[cell.x, cell.y].color = cellBase[cell.x, cell.y];
+    }
+
+    /// <summary>Borra todas las marcas de camino (usalo al reiniciar el nivel).</summary>
+    public void ClearVisited()
+    {
+        foreach (Vector2Int cell in visitedCells)
+        {
+            if (InBounds(cell)) cellSr[cell.x, cell.y].color = cellBase[cell.x, cell.y];
+        }
+        visitedCells.Clear();
+    }
+
+    // ---------- Efecto de choque (lo llama el Runner) ----------
+
+    /// <summary>Vuelve a mostrar al jugador (llamalo al reiniciar, despues de un choque).</summary>
+    public void ShowPlayer()
+    {
+        if (playerSr != null) playerSr.enabled = true;
+    }
+
+    /// <summary>El jugador se hace pedazos en 'pos' y desaparece hasta que se llame ShowPlayer().</summary>
+    public IEnumerator PlayCrashBurst(Vector3 pos)
+    {
+        if (playerSr != null) playerSr.enabled = false;
+
+        int n = Mathf.Max(0, crashFragmentCount);
+        GameObject[] frags = new GameObject[n];
+        SpriteRenderer[] fragSr = new SpriteRenderer[n];
+        Vector3[] vel = new Vector3[n];
+        float[] spin = new float[n];
+
+        for (int i = 0; i < n; i++)
+        {
+            float size = cellSize * Random.Range(0.08f, 0.16f);
+            frags[i] = CreateRect("CrashFragment", visualsRoot, GetSquare(), pos, Vector2.one * size, playerColor, 30);
+            fragSr[i] = frags[i].GetComponent<SpriteRenderer>();
+            float ang = Random.Range(0f, Mathf.PI * 2f);
+            float spd = Random.Range(1.5f, 4.5f) * cellSize;
+            vel[i] = new Vector3(Mathf.Cos(ang), Mathf.Sin(ang), 0f) * spd;
+            spin[i] = Random.Range(-720f, 720f);
+        }
+
+        float t = 0f;
+        while (t < crashBurstDuration)
+        {
+            float dt = Time.deltaTime;
+            t += dt;
+            float k = Mathf.Clamp01(t / crashBurstDuration);
+
+            for (int i = 0; i < n; i++)
+            {
+                vel[i] += Vector3.down * 6f * cellSize * dt; // caen como pedacitos rotos
+                frags[i].transform.position += vel[i] * dt;
+                frags[i].transform.Rotate(0f, 0f, spin[i] * dt);
+                Color c = fragSr[i].color;
+                c.a = 1f - k;
+                fragSr[i].color = c;
+            }
+            yield return null;
+        }
+
+        for (int i = 0; i < n; i++) Destroy(frags[i]);
     }
 
     // ---------- Sprites generados por codigo ----------

@@ -244,7 +244,7 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
+  m_RenderPostProcessing: 1
   m_Antialiasing: 0
   m_AntialiasingQuality: 2
   m_StopNaN: 0
@@ -371,8 +371,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Derecha
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: c45b096852f98fe488314d764b3c3679, type: 2}
+  m_sharedMaterial: {fileID: 671161952101381274, guid: c45b096852f98fe488314d764b3c3679, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -396,12 +396,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 21
+  m_fontSizeBase: 21
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
@@ -527,8 +527,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Arriba
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: c45b096852f98fe488314d764b3c3679, type: 2}
+  m_sharedMaterial: {fileID: 671161952101381274, guid: c45b096852f98fe488314d764b3c3679, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -552,12 +552,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 21
+  m_fontSizeBase: 21
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
@@ -769,8 +769,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Izquierda
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: c45b096852f98fe488314d764b3c3679, type: 2}
+  m_sharedMaterial: {fileID: 671161952101381274, guid: c45b096852f98fe488314d764b3c3679, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -794,12 +794,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 21
+  m_fontSizeBase: 21
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256
@@ -906,7 +906,7 @@ MonoBehaviour:
       m_Calls: []
   m_text: New Text
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: c45b096852f98fe488314d764b3c3679, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -973,7 +973,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 0
+  m_hasFontAssetChanged: 1
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!222 &889660602
@@ -1399,8 +1399,8 @@ MonoBehaviour:
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   selectedColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
   heartIcon: {fileID: 361499648}
-  heartOffsetX: -15
-  heartOffsetY: 6
+  heartOffsetX: -16
+  heartOffsetY: 13
   heartMoveSpeed: 15
   battleBox: {fileID: 0}
   OnConfirm:
@@ -1418,6 +1418,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+  externalLock: 0
 --- !u!1 &1169547712
 GameObject:
   m_ObjectHideFlags: 0
@@ -1431,6 +1432,9 @@ GameObject:
   - component: {fileID: 1169547714}
   - component: {fileID: 1169547713}
   - component: {fileID: 1169547717}
+  - component: {fileID: 1169547718}
+  - component: {fileID: 1169547719}
+  - component: {fileID: 1169547720}
   m_Layer: 0
   m_Name: Level
   m_TagString: Untagged
@@ -1453,9 +1457,15 @@ MonoBehaviour:
   level: {fileID: 0}
   queue: {fileID: 0}
   effects: {fileID: 0}
+  background: {fileID: 0}
   dialogue: {fileID: 0}
+  levelManager: {fileID: 0}
+  rewindStepDuration: 0.08
+  rewindFadeDuration: 0.2
+  rewindHoldAtStart: 0.3
   hideGridDuringDialogue: 1
   stepDuration: 0.3
+  iceSlideSpeedFactor: 0.55
   pauseBeforeReset: 0.8
   OnLevelComplete:
     m_PersistentCalls:
@@ -1483,6 +1493,15 @@ MonoBehaviour:
   winColor: {r: 0.3, g: 1, b: 0.5, a: 1}
   winDuration: 1.2
   winMaxAlpha: 0.35
+  winText: "\xA1NIVEL COMPLETADO!"
+  winTextSize: 30
+  winTextOffsetY: 40
+  staticAlpha: 0.4
+  staticRefreshRate: 18
+  staticResolution: 40
+  staticCameraJitter: 0.05
+  rewindFlashDuration: 0.15
+  rewindFlashMaxAlpha: 0.9
 --- !u!114 &1169547715
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1506,6 +1525,25 @@ MonoBehaviour:
   goalColor: {r: 0.15, g: 0.7, b: 0.25, a: 1}
   wallColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
   playerColor: {r: 0, g: 0.64, b: 0.91, a: 1}
+  lineBrightness: 0.45
+  lineThickness: 0.05
+  checkerStrength: 0.08
+  showCellDots: 1
+  frameColor: {r: 1, g: 1, b: 1, a: 1}
+  frameThickness: 0.09
+  framePadding: 0.14
+  burstDuration: 1.2
+  sparkCount: 28
+  waveColor: {r: 0.5, g: 1, b: 0.6, a: 1}
+  markVisitedCells: 1
+  visitedColor: {r: 0, g: 0.64, b: 0.91, a: 1}
+  visitedBlend: 0.45
+  iceColor: {r: 0.65, g: 0.86, b: 1, a: 1}
+  buttonColor: {r: 1, g: 0.8, b: 0.25, a: 1}
+  doorOpenColor: {r: 0.15, g: 0.65, b: 0.3, a: 1}
+  teleporterColor: {r: 0.75, g: 0.35, b: 1, a: 1}
+  crashBurstDuration: 0.45
+  crashFragmentCount: 10
 --- !u!4 &1169547716
 Transform:
   m_ObjectHideFlags: 0
@@ -1548,6 +1586,168 @@ MonoBehaviour:
   characterPosition: {x: 0, y: 120}
   slideDuration: 0.6
   characterExits: 1
+  music: {fileID: 8300000, guid: eba1131d5b592cd489e4432bcd83c179, type: 3}
+  musicVolume: 0.5
+  musicFadeIn: 1
+  stopMusicWhenGuideLeaves: 1
+  musicFadeOut: 0.8
+--- !u!114 &1169547718
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3fb54d90007d6e045a911956dabec796, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  colorA: {r: 0.08, g: 0.11, b: 0.26, a: 1}
+  colorB: {r: 0.11, g: 0.16, b: 0.36, a: 1}
+  tilesAcross: 14
+  scrollSpeed: {x: 0.04, y: -0.03}
+  pulseSpeed: 0.8
+  pulseAmount: 0.15
+  binaryRain: 1
+  bleed: 40
+--- !u!114 &1169547719
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a0d9d53ce07f82d43b3fc593af74b059, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  level: {fileID: 0}
+  runner: {fileID: 0}
+  queue: {fileID: 0}
+  canvas: {fileID: 0}
+  effects: {fileID: 0}
+  background: {fileID: 0}
+  chapters:
+  - name: "Pr\xF3logo"
+    levels:
+    - name: Primeros pasos
+      layout:
+      - S.......
+      - .......G
+      - ........
+      maxInstructions: 0
+      guideLines:
+      - Saludos!
+      - "Me presento, ser\xE9 tu gu\xEDa en esta misi\xF3n."
+      - "\xBFQue c\xF3mo me llamo?"
+      - Es curioso que lo digas...
+      - ......
+      - 'Acabas de escribir tu primer algoritmo: pasos en orden.'
+      - "Una m\xE1quina solo hace lo que le dices. Ni m\xE1s, ni menos."
+    - name: Paredes
+      layout:
+      - S....
+      - .###.
+      - .....
+      - .###.
+      - ....G
+      maxInstructions: 0
+      guideLines:
+      - "Los muros no est\xE1n para molestar."
+      - "Est\xE1n para que pienses el camino ANTES de ejecutarlo."
+      - Y si algo falla, el sistema rebobina...
+      - Buscar el error y corregirlo se llama depurar.
+    - name: Hielo
+      layout:
+      - S....
+      - ....#
+      - .~~~.
+      - ....G
+      maxInstructions: 0
+      guideLines:
+      - El hielo no te deja parar a mitad de camino.
+      - "Es como repetir una acci\xF3n hasta que algo la detenga."
+      - "En el c\xF3digo eso se llama bucle."
+      - Guarda esa palabra. La vas a necesitar.
+    - name: "Bot\xF3n y puerta"
+      layout:
+      - SB..
+      - '###D'
+      - ...G
+      maxInstructions: 0
+      guideLines:
+      - "Un bot\xF3n cambia el estado de la puerta."
+      - "Abierta o cerrada. S\xED o no."
+      - "En programaci\xF3n, a eso se le llama booleano: verdadero o falso."
+      - "1 o 0. Todo lo que ves aqu\xED est\xE1 hecho de eso."
+    - name: Teletransporte
+      layout:
+      - S...T
+      - .###.
+      - T...G
+      maxInstructions: 0
+      guideLines:
+      - Apareciste en otro lugar sin recorrer lo de en medio.
+      - "Se parece a una funci\xF3n: la llamas y pasan muchas cosas."
+      - "Una funci\xF3n encierra muchos pasos bajo un solo nombre."
+      - Pronto vas a crear las tuyas.
+    - name: A prueba
+      layout:
+      - S....
+      - .###.
+      - .....
+      - .###.
+      - ....G
+      maxInstructions: 8
+      guideLines:
+      - "Ocho instrucciones y ni una m\xE1s."
+      - 'No basta con que funcione: tiene que ser eficiente.'
+      - Menos pasos, mismo resultado. Eso es programar bien.
+      - "...Est\xE1s aprendiendo r\xE1pido. Casi demasiado."
+  - name: "Cap\xEDtulo 1"
+    levels:
+    - name: (Placeholder) Primer script
+      layout:
+      - S.......
+      - .......G
+      - ........
+      maxInstructions: 0
+      guideLines:
+      - "(Aqu\xED va el primer nivel donde eliges el script correcto."
+      - ' Lo armamos en el siguiente paso.)'
+  loopLevels: 1
+  labelFadeTime: 0.3
+  labelHoldTime: 1.1
+  titleFontSize: 42
+  subtitleFontSize: 22
+--- !u!114 &1169547720
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6dc705ccdc999144bfa694fa31ade28, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  levelManager: {fileID: 0}
+  runner: {fileID: 0}
+  queue: {fileID: 0}
+  pauseKey: 27
+  confirmKey: 122
+  confirmKeyAlt: 13
+  panelFill: {r: 0, g: 0, b: 0, a: 1}
+  panelBorder: {r: 1, g: 1, b: 1, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  selectedColor: {r: 1, g: 0.92, b: 0.2, a: 1}
+  lockedColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
+  heartOffsetX: -26
+  heartMoveSpeed: 20
+  heartFontSize: 22
 --- !u!1 &1286255127
 GameObject:
   m_ObjectHideFlags: 0
@@ -1741,7 +1941,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -37}
+  m_AnchoredPosition: {x: 0, y: -3}
   m_SizeDelta: {x: 520, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1471144591
@@ -2049,8 +2249,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Abajo
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: c45b096852f98fe488314d764b3c3679, type: 2}
+  m_sharedMaterial: {fileID: 671161952101381274, guid: c45b096852f98fe488314d764b3c3679, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -2074,12 +2274,12 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 36
-  m_fontSizeBase: 36
+  m_fontSize: 21
+  m_fontSizeBase: 21
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
-  m_fontSizeMax: 72
+  m_fontSizeMax: 32
   m_fontStyle: 0
   m_HorizontalAlignment: 1
   m_VerticalAlignment: 256

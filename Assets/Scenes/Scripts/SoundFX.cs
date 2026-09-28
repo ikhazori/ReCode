@@ -8,7 +8,7 @@ using UnityEngine;
 public static class SoundFX
 {
     private static AudioSource src;
-    private static AudioClip move, confirm, step, crash, win, blip;
+    private static AudioClip move, confirm, step, crash, win, blip, save, rewindStep, click, teleport;
 
     private const int Rate = 44100;
 
@@ -18,6 +18,14 @@ public static class SoundFX
     public static void Crash()   { Init(); Play(crash, 0.8f, 1f); }
     public static void Win()     { Init(); Play(win, 0.7f, 1f); }
     public static void Blip()    { Init(); Play(blip, 0.4f, Random.Range(0.95f, 1.08f)); }
+    /// <summary>Jingle suave al terminar un rebobinado (como un "punto de guardado").</summary>
+    public static void Save()    { Init(); Play(save, 0.6f, 1f); }
+    /// <summary>Sonido cortito y ascendente para cada paso al retroceder en el rebobinado.</summary>
+    public static void RewindStep() { Init(); Play(rewindStep, 0.3f, Random.Range(0.95f, 1.1f)); }
+    /// <summary>Click seco al pisar un boton.</summary>
+    public static void Click()   { Init(); Play(click, 0.45f, 1f); }
+    /// <summary>Sonido "ta-doop" al teletransportarse.</summary>
+    public static void Teleport(){ Init(); Play(teleport, 0.5f, 1f); }
 
     private static void Play(AudioClip clip, float volume, float pitch)
     {
@@ -41,6 +49,10 @@ public static class SoundFX
         crash   = Tone(220f, 40f, 0.45f, 0.35f, true);
         win     = Sequence(new float[] { 523f, 659f, 784f, 1047f }, 0.11f, 0.25f);
         blip    = Tone(700f, 700f, 0.035f, 0.2f, false);
+        save    = Sequence(new float[] { 784f, 988f, 1318f }, 0.1f, 0.28f);
+        rewindStep = Tone(260f, 780f, 0.05f, 0.18f, false); // tono que sube (al reves del Step normal, que baja)
+        click   = Tone(900f, 500f, 0.03f, 0.25f, false);
+        teleport = Sequence(new float[] { 400f, 900f, 1500f }, 0.05f, 0.22f);
     }
 
     // Una nota: frecuencia f0 -> f1, onda cuadrada (o ruido si noise = true), con fade out.

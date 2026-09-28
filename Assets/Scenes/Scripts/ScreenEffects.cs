@@ -36,12 +36,33 @@ public class ScreenEffects : MonoBehaviour
     [Tooltip("Posicion vertical del texto (0 = centro de la pantalla).")]
     public float winTextOffsetY = 40f;
 
+    [Header("Estatica de rebobinado (efecto VHS)")]
+    [Range(0f, 1f)] public float staticAlpha = 0.4f;
+    [Tooltip("Cuantas veces por segundo cambia el ruido. Mas alto = mas nervioso.")]
+    public float staticRefreshRate = 18f;
+    [Tooltip("Resolucion de la textura de ruido. Mas baja = 'granos' de ruido mas grandes (estilo TV vieja).")]
+    public int staticResolution = 40;
+    [Tooltip("Cuanto tiembla la camara mientras hay estatica (unidades del mundo).")]
+    public float staticCameraJitter = 0.05f;
+
+    [Header("Destello blanco (justo al llegar al inicio del rebobinado)")]
+    public float rewindFlashDuration = 0.15f;
+    [Range(0f, 1f)] public float rewindFlashMaxAlpha = 0.9f;
+
     private Image flash;
+    private RawImage staticOverlay;
+    private Texture2D staticTex;
+    private AudioSource noiseSource;
+    private bool staticActive;
+    private float staticFade;
+    private float staticTimer;
+    private Vector3 camBaseline;
 
     void Awake()
     {
         if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
         if (cam == null) cam = Camera.main;
+        camBaseline = cam != null ? cam.transform.position : Vector3.zero;
 
         GameObject go = new GameObject("CrashFlash");
         go.transform.SetParent(canvas.transform, false);
@@ -53,6 +74,151 @@ public class ScreenEffects : MonoBehaviour
         rt.anchorMax = Vector2.one;
         rt.offsetMin = Vector2.zero;
         rt.offsetMax = Vector2.zero;
+
+        // Overlay de estatica (ruido) para el rebobinado, estilo TV vieja / VHS
+        GameObject staticGo = new GameObject("RewindStatic");
+        staticGo.transform.SetParent(canvas.transform, false);
+        staticOverlay = staticGo.AddComponent<RawImage>();
+        staticOverlay.raycastTarget = false;
+        staticOverlay.color = new Color(1f, 1f, 1f, 0f);
+        RectTransform srt = staticOverlay.rectTransform;
+        srt.anchorMin = Vector2.zero;
+        srt.anchorMax = Vector2.one;
+        srt.offsetMin = Vector2.zero;
+        srt.offsetMax = Vector2.zero;
+
+        staticTex = new Texture2D(staticResolution, staticResolution, TextureFormat.RGBA32, false);
+        staticTex.filterMode = FilterMode.Point; // pixeles de ruido bien marcados, no borrosos
+        staticTex.wrapMode = TextureWrapMode.Repeat;
+        staticOverlay.texture = staticTex;
+        RandomizeStaticTexture();
+
+        // "Shhh" de ruido blanco que suena mientras dura el rebobinado
+        noiseSource = gameObject.AddComponent<AudioSource>();
+        noiseSource.playOnAwake = false;
+        noiseSource.loop = true;
+        noiseSource.volume = 0f;
+        noiseSource.clip = BuildNoiseClip(1f);
+    }
+
+    void Update()
+    {
+        // Fundido suave de la estatica: sube cuando esta activa, baja cuando se apaga
+        // (asi no aparece/desaparece de golpe).
+        staticFade = Mathf.MoveTowards(staticFade, staticActive ? 1f : 0f, Time.deltaTime * 8f);
+
+        if (staticFade > 0.001f)
+        {
+            // Solo se genera ruido NUEVO mientras la estatica esta realmente activa. Al
+            // apagarse, se deja de refrescar el patron y simplemente se desvanece el
+            // ultimo que quedo (antes se seguia randomizando durante el apagado, lo que
+            // se veia como que quedaban "restos" de ruido pegados en vez de un fundido limpio).
+            if (staticActive)
+            {
+                staticTimer += Time.deltaTime;
+                float interval = 1f / Mathf.Max(1f, staticRefreshRate);
+                if (staticTimer >= interval)
+                {
+                    staticTimer = 0f;
+                    RandomizeStaticTexture();
+                }
+            }
+
+            staticOverlay.color = new Color(1f, 1f, 1f, staticAlpha * staticFade);
+
+            if (cam != null)
+            {
+                Vector2 j = Random.insideUnitCircle * staticCameraJitter * staticFade;
+                cam.transform.position = camBaseline + new Vector3(j.x, j.y, 0f);
+            }
+        }
+        else
+        {
+            // Asegura que quede totalmente invisible (no solo "casi cero").
+            staticOverlay.color = new Color(1f, 1f, 1f, 0f);
+            if (cam != null) cam.transform.position = camBaseline;
+        }
+    }
+
+    /// <summary>
+    /// Corta de golpe CUALQUIER efecto en curso (estatica, destello, temblor de camara) y
+    /// deja todo en su estado normal. Usalo al saltar de nivel desde el menu de pausa, por
+    /// si el jugador se salio en medio de un rebobinado o un choque.
+    /// </summary>
+    public void ForceReset()
+    {
+        StopAllCoroutines();
+
+        staticActive = false;
+        staticFade = 0f;
+        if (staticOverlay != null) staticOverlay.color = new Color(1f, 1f, 1f, 0f);
+        if (noiseSource != null) noiseSource.Stop();
+
+        if (flash != null) flash.color = new Color(flash.color.r, flash.color.g, flash.color.b, 0f);
+        if (cam != null) cam.transform.position = camBaseline;
+    }
+
+    /// <summary>Prende o apaga la estatica de rebobinado (ruido en pantalla + "shhh" + temblor leve de camara).</summary>
+    public void SetRewindStatic(bool active)
+    {
+        staticActive = active;
+        if (noiseSource == null) return;
+
+        if (active)
+        {
+            noiseSource.volume = 0.4f;
+            if (!noiseSource.isPlaying) noiseSource.Play();
+        }
+        else
+        {
+            noiseSource.Stop();
+        }
+    }
+
+    /// <summary>Destello blanco bien rapido, como diciendo "aqui no paso nada" (usalo al llegar al inicio del rebobinado).</summary>
+    public IEnumerator PlayRewindArrivalFlash()
+    {
+        yield return PlayQuickFlash(Color.white, rewindFlashDuration, rewindFlashMaxAlpha);
+    }
+
+    /// <summary>Destello generico: sube y baja una sola vez, bien rapido.</summary>
+    public IEnumerator PlayQuickFlash(Color color, float duration, float maxAlpha)
+    {
+        flash.transform.SetAsLastSibling();
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / duration);
+            float alpha = Mathf.Sin(k * Mathf.PI) * maxAlpha;
+            flash.color = new Color(color.r, color.g, color.b, alpha);
+            yield return null;
+        }
+        flash.color = new Color(color.r, color.g, color.b, 0f);
+    }
+
+    private void RandomizeStaticTexture()
+    {
+        int n = staticResolution * staticResolution;
+        Color32[] pixels = new Color32[n];
+        for (int i = 0; i < n; i++)
+        {
+            byte v = (byte)Random.Range(0, 256);
+            pixels[i] = new Color32(v, v, v, 255);
+        }
+        staticTex.SetPixels32(pixels);
+        staticTex.Apply();
+    }
+
+    private static AudioClip BuildNoiseClip(float duration)
+    {
+        int rate = 44100;
+        int n = Mathf.Max(1, (int)(rate * duration));
+        float[] data = new float[n];
+        for (int i = 0; i < n; i++) data[i] = Random.Range(-0.4f, 0.4f);
+        AudioClip clip = AudioClip.Create("staticNoise", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
     }
 
     /// <summary>Destello verde suave de "ganaste": sube y baja una sola vez, sin temblor.</summary>

@@ -47,6 +47,9 @@ public class MenuNavigator : MonoBehaviour
     [Tooltip("Se dispara siempre al presionar Z/Enter, pasando el indice de la opcion elegida. Conectalo en el Inspector a lo que necesites.")]
     public IntUnityEvent OnConfirm;
 
+    [Tooltip("Si esta en true, el menu no lee input (lo usa el PauseMenuUI mientras el juego esta en pausa).")]
+    public bool externalLock = false;
+
     private int currentIndex = 0;
     private Vector2 heartTargetPos;
 
@@ -80,7 +83,7 @@ public class MenuNavigator : MonoBehaviour
 
         // Mientras el cuadro esta animando o mostrando el mensaje, no leemos
         // el input del menu (pero el corazon sigue deslizandose abajo).
-        bool inputBlocked = battleBox != null && battleBox.IsBusy;
+        bool inputBlocked = (battleBox != null && battleBox.IsBusy) || externalLock;
 
         if (!inputBlocked)
         {

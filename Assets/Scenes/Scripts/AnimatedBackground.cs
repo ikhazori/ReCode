@@ -32,6 +32,10 @@ public class AnimatedBackground : MonoBehaviour
     private RawImage raw;
     private RectTransform rt;
     private Vector2 offset;
+    private BinaryRain rain;
+
+    private Vector2 normalScrollSpeed;
+    private bool rewinding;
 
     void Awake()
     {
@@ -59,7 +63,7 @@ public class AnimatedBackground : MonoBehaviour
         raw.raycastTarget = false;
         raw.texture = BuildCheckerTexture();
 
-        if (binaryRain) BinaryRain.Create(canvas.transform, 1); // justo encima del fondo
+        if (binaryRain) rain = BinaryRain.Create(canvas.transform, 1); // justo encima del fondo
     }
 
     void Update()
@@ -75,6 +79,25 @@ public class AnimatedBackground : MonoBehaviour
 
         float b = 1f + Mathf.Sin(Time.time * pulseSpeed) * pulseAmount;
         raw.color = new Color(b, b, b, 1f);
+    }
+
+    /// <summary>El fondo (y la lluvia de numeros) empieza a desplazarse al reves y mas rapido (usalo en el rebobinado de LevelRunner).</summary>
+    public void BeginRewindScroll(float speedMultiplier = 2.5f)
+    {
+        if (rewinding) return;
+        rewinding = true;
+        normalScrollSpeed = scrollSpeed;
+        scrollSpeed = -scrollSpeed * speedMultiplier;
+        if (rain != null) rain.BeginRewind(speedMultiplier);
+    }
+
+    /// <summary>Vuelve a la velocidad y direccion normales.</summary>
+    public void EndRewindScroll()
+    {
+        if (!rewinding) return;
+        rewinding = false;
+        scrollSpeed = normalScrollSpeed;
+        if (rain != null) rain.EndRewind();
     }
 
     private Texture2D BuildCheckerTexture()
