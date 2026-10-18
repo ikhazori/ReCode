@@ -39,6 +39,8 @@ public class DialogueController : MonoBehaviour
     [Header("Personaje")]
     [Tooltip("Donde se queda el personaje (coordenadas del Canvas; 0,0 es el centro de la pantalla).")]
     public Vector2 characterPosition = new Vector2(0f, 120f);
+    [Tooltip("Sube (+) o baja (-) al guia respecto a 'Character Position'. Si sale muy arriba, usa un numero negativo.")]
+    public float guideYOffset = -45f;
     public float slideDuration = 0.6f;
     [Tooltip("Si esta marcado, el personaje se va deslizandose al terminar el dialogo.")]
     public bool characterExits = true;
@@ -61,12 +63,17 @@ public class DialogueController : MonoBehaviour
     [Header("Interaccion con el guia (tecla E)")]
     [Tooltip("Si esta marcado, cuando el guia llega flota 'Presiona E para hablar' y el dialogo empieza al pulsar E.")]
     public bool requireTalkPrompt = true;
+    [Tooltip("Si esta marcado, el dialogo empieza solo cuando el guia termina de entrar (sin pedir E). E sigue sirviendo para pasar de una frase a la siguiente.")]
+    public bool autoStartTalk = true;
     public string talkPrompt = "Presiona E para hablar";
     [Tooltip("El Canvas donde flota el indicador. Se busca solo.")]
     public Canvas canvas;
 
     /// <summary>True mientras hay un dialogo o un panel de terminal abierto (evita que se abran dos a la vez).</summary>
     public bool IsPlaying { get; private set; }
+
+    private float GuideY { get { return characterPosition.y + guideYOffset; } }
+    private bool boxClosing;
 
     private GuideIdle guideIdle;
     private AudioSource audioSource;
@@ -113,20 +120,26 @@ public class DialogueController : MonoBehaviour
 
         try
         {
-            // 1. Entra el personaje desde la izquierda hasta su posicion
+            // 1. El cuadro de opciones se cierra mientras el personaje entra desde la izquierda
             float offscreenX = GetOffscreenX();
-            character.anchoredPosition = new Vector2(offscreenX, characterPosition.y);
+            character.anchoredPosition = new Vector2(offscreenX, GuideY);
             character.gameObject.SetActive(true);
             StartMusic(); // aparece el personaje -> empieza la musica
             if (musicSource != null) MusicManager.Duck(true); // la musica de los niveles cede ante el tema del guia
+
+            boxClosing = true;
+            StartCoroutine(CloseBoxRoutine());
             yield return Slide(offscreenX, characterPosition.x);
+            while (boxClosing) yield return null;
 
-            // 1b. El guia espera: flota "Presiona E para hablar"
-            if (requireTalkPrompt) yield return WaitForTalk();
+            // 1b. El texto empieza solo (o, si lo prefieres, flota "Presiona E para hablar")
+            if (requireTalkPrompt && !autoStartTalk) yield return WaitForTalk();
+            else yield return new WaitForSeconds(0.3f);
 
-            // 2. El cuadro se cierra, cambia a modo mensaje y se abre
-            yield return battleBox.CloseBox();
+            // 2. Modo mensaje y el cuadro se abre (si venia de la animacion de ejecucion, aqui reaparece)
             battleBox.ShowMessageContent("");
+            RunCinematic cinematic = FindFirstObjectByType<RunCinematic>();
+            if (cinematic != null) cinematic.ShowMenus();
             yield return battleBox.OpenBox();
 
             // 3. Cada frase: se escribe, y E / Z / Enter / Espacio para pasar a la siguiente
@@ -187,6 +200,12 @@ public class DialogueController : MonoBehaviour
         {
             IsPlaying = false;
         }
+    }
+
+    private IEnumerator CloseBoxRoutine()
+    {
+        yield return battleBox.CloseBox();
+        boxClosing = false;
     }
 
     // El guia ya esta en pantalla: flota el indicador y se espera a que el jugador pulse E.
@@ -287,10 +306,10 @@ public class DialogueController : MonoBehaviour
         {
             t += Time.deltaTime;
             float k = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / slideDuration));
-            character.anchoredPosition = new Vector2(Mathf.Lerp(fromX, toX, k), characterPosition.y);
+            character.anchoredPosition = new Vector2(Mathf.Lerp(fromX, toX, k), GuideY);
             yield return null;
         }
-        character.anchoredPosition = new Vector2(toX, characterPosition.y);
+        character.anchoredPosition = new Vector2(toX, GuideY);
     }
 
     // X (en coordenadas del Canvas) donde el personaje queda completamente fuera de pantalla por la izquierda

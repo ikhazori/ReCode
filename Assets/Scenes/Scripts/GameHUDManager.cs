@@ -35,6 +35,16 @@ public class GameHUDManager : MonoBehaviour
     [Tooltip("Multiplica el tamaño del HUD. Ya se ajusta solo al tamaño de tu Canvas; usa esto solo para afinar (1 = normal).")]
     [Range(0.3f, 2f)] public float uiScale = 1f;
 
+    [Header("Movimiento (flotar suave)")]
+    [Tooltip("El panel se mueve despacito, como flotando. Desmarca para dejarlo fijo.")]
+    public bool floatEffect = true;
+    [Tooltip("Cuanto se mueve (unidades del Canvas): X = de lado, Y = arriba/abajo.")]
+    public Vector2 floatAmplitude = new Vector2(3f, 5f);
+    [Tooltip("Velocidad del vaiven (1 = normal, 0.5 = lento).")]
+    public float floatSpeed = 0.8f;
+    [Tooltip("Inclinacion maxima en grados (0 = sin inclinar).")]
+    public float floatTilt = 0.5f;
+
     [Header("Textos (editables)")]
     public string title = "FRAGMENTOS";
     [Tooltip("{0} se reemplaza por el total de fragmentos.")]
@@ -65,17 +75,19 @@ public class GameHUDManager : MonoBehaviour
     public Color accentColor = new Color(1f, 0.92f, 0.2f);     // amarillo (como la opcion elegida)
     public Color levelColor = new Color(0.4f, 1f, 0.9f);
     public Color emptySlotColor = new Color(0.22f, 0.22f, 0.22f);
+    [Tooltip("Color de la barra de titulo (como la ventana de un editor de codigo).")]
+    public Color headerColor = new Color(0.08f, 0.32f, 0.36f);
 
     // ---------------------------------------------------------------- estado
 
     // Medidas pensadas para un Canvas de 1280 de ancho; se escalan solas segun el Canvas real.
     private const float ReferenceWidth = 1280f;
-    private const float PanelW = 244f, PanelH = 200f;
+    private const float PanelW = 244f, PanelH = 216f, HeaderH = 26f;
     private const float SlotSize = 40f, SlotGap = 6f;
 
     private RectTransform hudRoot;
     private CanvasGroup hudGroup;
-    private TextMeshProUGUI titleTmp, stepsTmp, levelTmp, objectiveTmp;
+    private TextMeshProUGUI titleTmp, counterTmp, stepsTmp, levelTmp, objectiveTmp;
     private Image[] slotIcons;
     private Image[] slotBorders;
 
@@ -163,8 +175,8 @@ public class GameHUDManager : MonoBehaviour
         lastCount = count;
 
         int total = FragmentInventory.Total;
-        string hex = ColorUtility.ToHtmlStringRGB(count >= total ? accentColor : textColor);
-        titleTmp.text = title + "  <color=#" + hex + ">" + count + "/" + total + "</color>";
+        counterTmp.color = count >= total ? accentColor : textColor;
+        counterTmp.text = count + "/" + total;
 
         for (int i = 0; i < slotIcons.Length; i++)
         {
@@ -226,8 +238,8 @@ public class GameHUDManager : MonoBehaviour
         flashTimer -= Time.unscaledDeltaTime;
         float k = Mathf.Clamp01(flashTimer / 0.6f);
         float s = 1f + 0.12f * Mathf.Sin(k * Mathf.PI * 3f) * k;
-        titleTmp.rectTransform.localScale = new Vector3(s, s, 1f);
-        if (flashTimer <= 0f) titleTmp.rectTransform.localScale = Vector3.one;
+        counterTmp.rectTransform.localScale = new Vector3(s, s, 1f);
+        if (flashTimer <= 0f) counterTmp.rectTransform.localScale = Vector3.one;
     }
 
     // ---------------------------------------------------------------- aviso al recoger
@@ -313,9 +325,20 @@ public class GameHUDManager : MonoBehaviour
 
         RectTransform fill = NewImage("Fill", hudRoot, fillColor, 3f);
 
-        // Titulo + contador
-        titleTmp = NewText("Title", fill, 20f, TextAlignmentOptions.Left, textColor);
-        SetRect(titleTmp.rectTransform, 8f, 6f, PanelW - 22f, 26f);
+        // Barra de titulo (como la ventana de un editor de codigo): nombre a la izquierda, contador a la derecha
+        NewStrip("Header", fill, headerColor, HeaderH);
+
+        titleTmp = NewText("Title", fill, 15f, TextAlignmentOptions.MidlineLeft, textColor);
+        titleTmp.text = title;
+        SetRect(titleTmp.rectTransform, 8f, 0f, 150f, HeaderH);
+
+        counterTmp = NewText("Counter", fill, 17f, TextAlignmentOptions.MidlineRight, textColor);
+        RectTransform crt = counterTmp.rectTransform;
+        crt.anchorMin = new Vector2(1f, 1f);
+        crt.anchorMax = new Vector2(1f, 1f);
+        crt.pivot = new Vector2(1f, 0.5f);
+        crt.sizeDelta = new Vector2(64f, HeaderH);
+        crt.anchoredPosition = new Vector2(-8f, -HeaderH / 2f);
 
         // Mini-inventario: 5 cuadros con icono y su nombre corto debajo
         int total = FragmentInventory.Total;
@@ -327,7 +350,7 @@ public class GameHUDManager : MonoBehaviour
             float x = x0 + i * (SlotSize + SlotGap);
 
             RectTransform slot = NewImage("Slot" + i, fill, new Color(1f, 1f, 1f, 0.35f), 0f);
-            SetRect(slot, x, 36f, SlotSize, SlotSize);
+            SetRect(slot, x, 34f, SlotSize, SlotSize);
             slotBorders[i] = slot.GetComponent<Image>();
 
             RectTransform inner = NewImage("SlotFill", slot, Color.black, 2f);
@@ -348,21 +371,32 @@ public class GameHUDManager : MonoBehaviour
 
             TextMeshProUGUI lbl = NewText("SlotLabel" + i, fill, 12f, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.75f));
             lbl.text = FragmentInventory.All[i].shortName;
-            SetRect(lbl.rectTransform, x - 3f, 78f, SlotSize + 6f, 16f);
+            SetRect(lbl.rectTransform, x - 3f, 76f, SlotSize + 6f, 16f);
         }
 
         stepsTmp = NewText("Steps", fill, 15f, TextAlignmentOptions.Left, textColor);
-        SetRect(stepsTmp.rectTransform, 8f, 98f, PanelW - 16f, 20f);
+        SetRect(stepsTmp.rectTransform, 8f, 94f, PanelW - 22f, 20f);
 
-        levelTmp = NewText("Level", fill, 13f, TextAlignmentOptions.Left, levelColor);
-        levelTmp.textWrappingMode = TextWrappingModes.NoWrap;
-        levelTmp.overflowMode = TextOverflowModes.Ellipsis;
-        SetRect(levelTmp.rectTransform, 8f, 120f, PanelW - 16f, 18f);
+        // El nombre del nivel ahora puede ocupar 2 lineas (antes se cortaba con "...")
+        levelTmp = NewText("Level", fill, 13f, TextAlignmentOptions.TopLeft, levelColor);
+        levelTmp.textWrappingMode = TextWrappingModes.Normal;
+        SetRect(levelTmp.rectTransform, 8f, 116f, PanelW - 22f, 32f);
 
         objectiveTmp = NewText("Objective", fill, 13f, TextAlignmentOptions.TopLeft, new Color(1f, 1f, 1f, 0.85f));
         objectiveTmp.textWrappingMode = TextWrappingModes.Normal;
         objectiveTmp.text = objective.Replace("{0}", FragmentInventory.Total.ToString()) + "\n" + goalHint;
-        SetRect(objectiveTmp.rectTransform, 8f, 140f, PanelW - 16f, 56f);
+        SetRect(objectiveTmp.rectTransform, 8f, 150f, PanelW - 22f, 60f);
+
+        // Vaiven suave (el panel flota alrededor de su posicion)
+        if (floatEffect)
+        {
+            PanelFloat f = go.AddComponent<PanelFloat>();
+            f.amplitude = floatAmplitude;
+            f.speed = floatSpeed;
+            f.tiltDegrees = floatTilt;
+            f.phase = 0f;
+            f.Capture();
+        }
     }
 
     private void BuildToast()
@@ -444,6 +478,23 @@ public class GameHUDManager : MonoBehaviour
         rt.anchorMax = Vector2.one;
         rt.offsetMin = new Vector2(inset, inset);
         rt.offsetMax = new Vector2(-inset, -inset);
+        Image img = go.GetComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
+        return rt;
+    }
+
+    // Franja horizontal pegada arriba del padre (para la barra de titulo).
+    private static RectTransform NewStrip(string objName, Transform parent, Color color, float height)
+    {
+        GameObject go = new GameObject(objName, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        RectTransform rt = (RectTransform)go.transform;
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.offsetMin = new Vector2(0f, -height);
+        rt.offsetMax = Vector2.zero;
         Image img = go.GetComponent<Image>();
         img.color = color;
         img.raycastTarget = false;

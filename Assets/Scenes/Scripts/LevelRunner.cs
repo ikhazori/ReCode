@@ -21,6 +21,8 @@ public class LevelRunner : MonoBehaviour
     public LevelManager levelManager;
     [Tooltip("Opcional. Fragmentos y terminales del nivel (se busca solo).")]
     public LevelExtras extras;
+    [Tooltip("Opcional. Si existe en la escena, al ejecutar la secuencia esconde los menus y agranda el tablero (se busca solo).")]
+    public RunCinematic cinematic;
 
     [Header("Rebobinado (cuando la secuencia termina y no llegaste a la meta)")]
     [Tooltip("Cuanto tarda cada paso al retroceder. Mas bajo = mas rapido (efecto camara rapida).")]
@@ -69,6 +71,7 @@ public class LevelRunner : MonoBehaviour
         if (dialogue == null) dialogue = FindFirstObjectByType<DialogueController>();
         if (levelManager == null) levelManager = FindFirstObjectByType<LevelManager>();
         if (extras == null) extras = FindFirstObjectByType<LevelExtras>();
+        if (cinematic == null) cinematic = FindFirstObjectByType<RunCinematic>();
 
         currentCell = level.StartCell;
         queue.OnRunRequested.AddListener(Run);
@@ -84,6 +87,9 @@ public class LevelRunner : MonoBehaviour
     {
         running = true;
         queue.Locked = true;
+
+        // Se esconden los menus y el tablero se agranda ANTES de empezar a moverse
+        if (cinematic != null) yield return cinematic.Enter();
 
         List<Direction> instructions = new List<Direction>(queue.Instructions);
         currentCell = level.StartCell;
@@ -129,6 +135,14 @@ public class LevelRunner : MonoBehaviour
             if (effects != null) yield return effects.PlayWinEffect();
             yield return burst;
 
+            // La camara y los paneles vuelven a su sitio. Si hay dialogo del guia, los cuadros de abajo
+            // siguen escondidos: los muestra el propio dialogo cuando el guia ya va a hablar.
+            if (cinematic != null)
+            {
+                queue.ClearInstructions();
+                yield return cinematic.Exit(dialogue != null);
+            }
+
             if (dialogue != null)
             {
                 queue.ClearInstructions(); // quita los iconos para que no tapen el texto
@@ -159,6 +173,7 @@ public class LevelRunner : MonoBehaviour
         }
 
         ResetLevel();
+        if (cinematic != null) yield return cinematic.Exit(); // si ya salio (al ganar) no hace nada
         queue.Locked = false;
         running = false;
     }

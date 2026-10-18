@@ -42,6 +42,16 @@ public class PseudocodePanel : MonoBehaviour
     public int maxVisibleLines = 11;
     public float fontSize = 11f;
 
+    [Header("Movimiento (flotar suave)")]
+    [Tooltip("El panel se mueve despacito, como flotando. Desmarca para dejarlo fijo.")]
+    public bool floatEffect = true;
+    [Tooltip("Cuanto se mueve (unidades del Canvas): X = de lado, Y = arriba/abajo.")]
+    public Vector2 floatAmplitude = new Vector2(3f, 5f);
+    [Tooltip("Velocidad del vaiven (1 = normal, 0.5 = lento).")]
+    public float floatSpeed = 0.8f;
+    [Tooltip("Inclinacion maxima en grados (0 = sin inclinar).")]
+    public float floatTilt = 0.5f;
+
     [Header("Textos")]
     public string title = "PSEUDOCÓDIGO";
     public string emptyHint = "// arma la secuencia";
@@ -57,12 +67,14 @@ public class PseudocodePanel : MonoBehaviour
     public Color activeColor = new Color(1f, 0.92f, 0.2f);
     public Color errorColor = new Color(1f, 0.35f, 0.4f);
     public Color hintColor = new Color(0.55f, 0.55f, 0.55f);
+    [Tooltip("Color de la barra de titulo (como la ventana de un editor de codigo).")]
+    public Color headerColor = new Color(0.08f, 0.32f, 0.36f);
 
     // Medidas pensadas para un Canvas de 1280 de ancho; se escalan solas segun el Canvas real.
     private const float ReferenceWidth = 1280f;
-    private const float PanelW = 250f;
+    private const float PanelW = 290f;
     private const float LineH = 19f;
-    private const float HeaderH = 34f;
+    private const float HeaderH = 34f, StripH = 26f;
     private const float Pad = 10f;
 
     private RectTransform root;
@@ -168,7 +180,7 @@ public class PseudocodePanel : MonoBehaviour
         lines.Add(Colored(keywordColor, "INICIO"));
 
         if (groups.Count == 0)
-            lines.Add(Colored(hintColor, "  " + emptyHint));
+            AddWrapped(lines, hintColor, emptyHint, "  ");
 
         for (int g = 0; g < groups.Count; g++)
         {
@@ -194,7 +206,7 @@ public class PseudocodePanel : MonoBehaviour
             {
                 // Varias iguales seguidas = un bucle
                 lines.Add(Colored(plain ? keywordColor : state, marker + "REPETIR " + grp.count + " VECES"));
-                lines.Add(Colored(state, "      " + code));
+                lines.Add(Colored(state, "    " + code));
             }
             else
             {
@@ -209,12 +221,12 @@ public class PseudocodePanel : MonoBehaviour
 
         if (crashed >= 0)
         {
-            lines.Add(Colored(errorColor, crashError.Replace("{0}", (crashed + 1).ToString())));
+            AddWrapped(lines, errorColor, crashError.Replace("{0}", (crashed + 1).ToString()), "");
             focus = lines.Count - 1;
         }
         else if (endedShort)
         {
-            lines.Add(Colored(errorColor, shortError));
+            AddWrapped(lines, errorColor, shortError, "");
             focus = lines.Count - 1;
         }
 
@@ -234,6 +246,27 @@ public class PseudocodePanel : MonoBehaviour
         if (endLine < lines.Count) sb.Append('\n').Append(Colored(hintColor, "  ..."));
 
         bodyTmp.text = sb.ToString();
+    }
+
+    // Parte un texto largo en varias lineas (por palabras) para que no se salga del panel.
+    private const int WrapChars = 22;
+
+    private static void AddWrapped(List<string> lines, Color c, string text, string indent)
+    {
+        string[] words = text.Split(' ');
+        StringBuilder cur = new StringBuilder();
+        foreach (string w in words)
+        {
+            if (w.Length == 0) continue;
+            if (cur.Length > 0 && indent.Length + cur.Length + 1 + w.Length > WrapChars)
+            {
+                lines.Add(Colored(c, indent + cur.ToString()));
+                cur.Length = 0;
+            }
+            if (cur.Length > 0) cur.Append(' ');
+            cur.Append(w);
+        }
+        if (cur.Length > 0) lines.Add(Colored(c, indent + cur.ToString()));
     }
 
     private static string Colored(Color c, string text)
@@ -279,14 +312,60 @@ public class PseudocodePanel : MonoBehaviour
         fillImg.color = fillColor;
         fillImg.raycastTarget = false;
 
-        titleTmp = NewText("Title", fill, fontSize + 2f, TextAlignmentOptions.Left, keywordColor);
+        // Barra de titulo (como la ventana de un editor de codigo) con sus 3 puntitos
+        NewStrip("Header", fill, headerColor, StripH);
+
+        titleTmp = NewText("Title", fill, fontSize + 2f, TextAlignmentOptions.MidlineLeft, keywordColor);
         titleTmp.text = title;
-        SetRect(titleTmp.rectTransform, Pad, 6f, PanelW - 2f * Pad, 24f);
+        SetRect(titleTmp.rectTransform, Pad, 0f, PanelW - 2f * Pad - 50f, StripH);
+
+        float dotX = PanelW - 6f - 50f;
+        NewDot(fill, dotX, 9f, 8f, errorColor);
+        NewDot(fill, dotX + 14f, 9f, 8f, activeColor);
+        NewDot(fill, dotX + 28f, 9f, 8f, new Color(0.4f, 1f, 0.5f));
 
         bodyTmp = NewText("Body", fill, fontSize, TextAlignmentOptions.TopLeft, normalColor);
         bodyTmp.richText = true;
         bodyTmp.lineSpacing = 0f;
         SetRect(bodyTmp.rectTransform, Pad, HeaderH, PanelW - 2f * Pad, h - HeaderH - Pad);
+
+        // Vaiven suave (con desfase para que no se mueva igual que el HUD)
+        if (floatEffect)
+        {
+            PanelFloat f = go.AddComponent<PanelFloat>();
+            f.amplitude = floatAmplitude;
+            f.speed = floatSpeed;
+            f.tiltDegrees = floatTilt;
+            f.phase = 2.1f;
+            f.Capture();
+        }
+    }
+
+    // Franja horizontal pegada arriba del padre (para la barra de titulo).
+    private static void NewStrip(string objName, Transform parent, Color color, float height)
+    {
+        GameObject go = new GameObject(objName, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        RectTransform rt = (RectTransform)go.transform;
+        rt.anchorMin = new Vector2(0f, 1f);
+        rt.anchorMax = new Vector2(1f, 1f);
+        rt.pivot = new Vector2(0.5f, 1f);
+        rt.offsetMin = new Vector2(0f, -height);
+        rt.offsetMax = Vector2.zero;
+        Image img = go.GetComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
+    }
+
+    // Cuadradito de color (los 3 puntos de la barra de titulo).
+    private static void NewDot(Transform parent, float x, float y, float size, Color color)
+    {
+        GameObject go = new GameObject("Dot", typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(parent, false);
+        SetRect((RectTransform)go.transform, x, y, size, size);
+        Image img = go.GetComponent<Image>();
+        img.color = color;
+        img.raycastTarget = false;
     }
 
     private static TextMeshProUGUI NewText(string objName, Transform parent, float size, TextAlignmentOptions align, Color color)
