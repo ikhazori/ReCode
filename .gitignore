@@ -1,59 +1,41 @@
-# === Unity: carpetas generadas ===
-/[Ll]ibrary/
-/[Tt]emp/
-/[Oo]bj/
-/[Bb]uild/
-/[Bb]uilds/
-/[Ll]ogs/
-/[Uu]ser[Ss]ettings/
-/[Mm]emoryCaptures/
-/[Rr]ecordings/
+# Unity
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Uu]ser[Ss]ettings/
+[Mm]emoryCaptures/
+[Rr]ecordings/
 
-# === Unity: assets autogenerados por herramientas ===
-/[Aa]ssets/Plugins/Editor/JetBrains*
-/[Aa]ssets/[Ss]treamingAssets/aa.meta
-/[Aa]ssets/[Ss]treamingAssets/aa/*
-
-# === Solución y proyectos C# (Unity los regenera) ===
+# Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
 *.csproj
 *.unityproj
 *.sln
-*.slnx
 *.suo
 *.tmp
 *.user
 *.userprefs
 *.pidb
 *.booproj
-.vs/
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
 
-# === Crash / debug ===
-sysinfo.txt
-*.pidb.meta
-*.pdb.meta
-*.mdb.meta
+# Builds
 *.apk
 *.aab
 *.unitypackage
 *.app
+
+# Crashlytics / sistema
+sysinfo.txt
 crashlytics-build.properties
-
-# === Visual Studio Code ===
-# Ignora la config local, pero conserva settings/extensions compartibles
-.vscode/*
-!.vscode/settings.json
-!.vscode/extensions.json
-!.vscode/launch.json
-
-# === Otros editores ===
-.idea/
-*.swp
-
-# === Sistema operativo ===
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# === Paquetes locales ===
-# (Packages/manifest.json y packages-lock.json SÍ deben subirse)
-/[Pp]ackages/com.unity.*/
