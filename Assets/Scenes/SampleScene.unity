@@ -1443,6 +1443,10 @@ GameObject:
   - component: {fileID: 1169547722}
   - component: {fileID: 1169547724}
   - component: {fileID: 1169547723}
+  - component: {fileID: 1169547726}
+  - component: {fileID: 1169547725}
+  - component: {fileID: 1169547727}
+  - component: {fileID: 1169547728}
   m_Layer: 0
   m_Name: Level
   m_TagString: Untagged
@@ -1468,6 +1472,8 @@ MonoBehaviour:
   background: {fileID: 0}
   dialogue: {fileID: 0}
   levelManager: {fileID: 0}
+  extras: {fileID: 0}
+  cinematic: {fileID: 0}
   rewindStepDuration: 0.08
   rewindFadeDuration: 0.2
   rewindHoldAtStart: 0.3
@@ -1603,6 +1609,7 @@ MonoBehaviour:
   blipSound: {fileID: 8300000, guid: 6d5df20f5e500e24b91ed3bb960932c7, type: 3}
   blipVolume: 0.5
   characterPosition: {x: 0, y: 120}
+  guideYOffset: -45
   slideDuration: 0.6
   characterExits: 1
   music: {fileID: 8300000, guid: eba1131d5b592cd489e4432bcd83c179, type: 3}
@@ -1611,6 +1618,10 @@ MonoBehaviour:
   stopMusicWhenGuideLeaves: 1
   musicFadeOut: 0.8
   asteriskPrefix: 1
+  requireTalkPrompt: 1
+  autoStartTalk: 1
+  talkPrompt: Presiona E para hablar
+  canvas: {fileID: 0}
 --- !u!114 &1169547718
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1677,6 +1688,7 @@ MonoBehaviour:
   canvas: {fileID: 0}
   effects: {fileID: 0}
   background: {fileID: 0}
+  extras: {fileID: 0}
   chapters:
   - name: "Pr\xF3logo"
     levels:
@@ -1827,18 +1839,19 @@ MonoBehaviour:
   - "* Hay un error en alguna parte.\n  Siempre lo hay."
   - "* Huele a memoria reci\xE9n formateada."
   - "* Depurar: el arte de buscar\n  lo que t\xFA mismo escribiste."
-  credits:
+  creditLines:
   - '> cat creditos.txt'
   - 
   - ReCode
-  - Un juego para aprender a programar.
+  - "Aprende pseudoc\xF3digo jugando."
   - 
-  - "Dise\xF1o y programaci\xF3n:  TU NOMBRE AQUI"
-  - 'Arte:  TU NOMBRE AQUI'
-  - "M\xFAsica:  TU NOMBRE AQUI"
+  - "Dise\xF1o y programaci\xF3n:"
+  - Kenneth Santiago Ceballos Sierra
+  - Danna Valentina Arenas Jimenez
   - 
+  - "M\xFAsica: Toby Fox (Undertale)"
+  - y Balatro (LouisF)
   - Hecho con Unity.
-  - Inspirado en Undertale.
   - 
   - '> presiona X para volver_'
   backgroundColor: {r: 0.02, g: 0.03, b: 0.08, a: 1}
@@ -1901,18 +1914,19 @@ MonoBehaviour:
   - "* Hay un error en alguna parte.\n  Siempre lo hay."
   - "* Huele a memoria reci\xE9n formateada."
   - "* Depurar: el arte de buscar\n  lo que t\xFA mismo escribiste."
-  credits:
+  creditLines:
   - '> cat creditos.txt'
   - 
   - ReCode
-  - Un juego para aprender a programar.
+  - "Aprende pseudoc\xF3digo jugando."
   - 
-  - "Dise\xF1o y programaci\xF3n:  TU NOMBRE AQUI"
-  - 'Arte:  TU NOMBRE AQUI'
-  - "M\xFAsica:  TU NOMBRE AQUI"
+  - "Dise\xF1o y programaci\xF3n:"
+  - Kenneth Santiago Ceballos Sierra
+  - Danna Valentina Arenas Jimenez
   - 
+  - "M\xFAsica: Toby Fox (Undertale)"
+  - y Balatro (LouisF)
   - Hecho con Unity.
-  - Inspirado en Undertale.
   - 
   - '> presiona X para volver_'
   backgroundColor: {r: 0.02, g: 0.03, b: 0.08, a: 1}
@@ -1956,6 +1970,221 @@ MonoBehaviour:
   rewindPitch: 0.65
   rewindLowPassHz: 2000
   rewindFadeDuration: 0.25
+--- !u!114 &1169547725
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03c20d9595f7a094f88fcd1c921a14d7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  canvas: {fileID: 0}
+  levelManager: {fileID: 0}
+  queue: {fileID: 0}
+  startMenu: {fileID: 0}
+  corner: 0
+  margin: {x: 14, y: 14}
+  uiScale: 1
+  floatEffect: 1
+  floatAmplitude: {x: 3, y: 5}
+  floatSpeed: 0.8
+  floatTilt: 0.5
+  title: FRAGMENTOS
+  objective: "Misi\xF3n: recupera los {0} fragmentos de c\xF3digo."
+  goalHint: Llega a la meta.
+  toastTitle: FRAGMENTO RECUPERADO
+  toastSeconds: 3.2
+  missionGuideLines:
+  - "Lo lograste. Los cinco fragmentos est\xE1n completos."
+  - "Algoritmo, depurar, bucle, booleano y funci\xF3n."
+  - Con eso ya puedes escribir tu primer programa.
+  - "Una m\xE1quina solo hace lo que le dices... y ahora sabes c\xF3mo dec\xEDrselo."
+  missionTitle: "\xA1FELICIDADES!"
+  missionBody: "Recuperaste los 5 fragmentos de c\xF3digo.\nYa conoces las bases
+    del pseudoc\xF3digo: algoritmo, depuraci\xF3n, bucle, booleano y funci\xF3n."
+  missionContinue: Presiona E para continuar
+  borderColor: {r: 1, g: 1, b: 1, a: 1}
+  fillColor: {r: 0, g: 0, b: 0, a: 1}
+  textColor: {r: 1, g: 1, b: 1, a: 1}
+  accentColor: {r: 1, g: 0.92, b: 0.2, a: 1}
+  levelColor: {r: 0.4, g: 1, b: 0.9, a: 1}
+  emptySlotColor: {r: 0.22, g: 0.22, b: 0.22, a: 1}
+  headerColor: {r: 0.08, g: 0.32, b: 0.36, a: 1}
+--- !u!114 &1169547726
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e84185d82c964547a04e3a6baf16dbd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  level: {fileID: 0}
+  dialogue: {fileID: 0}
+  canvas: {fileID: 0}
+  interactKey: 101
+  terminalPrompt: Presiona E para leer
+  terminalWaitSeconds: 3.5
+  terminalColor: {r: 0.4, g: 1, b: 0.9, a: 1}
+  fragmentSize: 0.55
+  terminalSize: 0.6
+  placements:
+  - note: 'Terminal 1: algoritmo'
+    chapter: 0
+    level: 0
+    column: 2
+    row: 0
+    kind: 1
+    fragmentId: 
+    terminalPages:
+    - '> TERMINAL 01: ALGORITMO
+
+      Un algoritmo es una lista de pasos, en orden,
+      para resolver un problema.'
+    - "Tu primer algoritmo:\nINICIO\n  mover(derecha) x7\n  mover(abajo)\nFIN"
+    - "Cada flecha que armas es una instrucci\xF3n.\nPresiona R y la m\xE1quina las
+      ejecuta una por una."
+  - note: Fragmento ALGORITMO
+    chapter: 0
+    level: 0
+    column: 4
+    row: 0
+    kind: 0
+    fragmentId: algoritmo
+    terminalPages: []
+  - note: Fragmento DEPURAR
+    chapter: 0
+    level: 1
+    column: 2
+    row: 2
+    kind: 0
+    fragmentId: depurar
+    terminalPages: []
+  - note: Fragmento BUCLE (sobre el hielo)
+    chapter: 0
+    level: 2
+    column: 2
+    row: 2
+    kind: 0
+    fragmentId: bucle
+    terminalPages: []
+  - note: 'Terminal 2: booleanos'
+    chapter: 0
+    level: 3
+    column: 2
+    row: 0
+    kind: 1
+    fragmentId: 
+    terminalPages:
+    - '> TERMINAL 02: BOOLEANOS
+
+      Un booleano solo puede valer VERDADERO o FALSO.'
+    - "puerta_abierta = FALSO\nSI pisas el bot\xF3n ENTONCES\n  puerta_abierta =
+      VERDADERO\nFIN SI"
+    - "Cada vez que pisas el bot\xF3n, el valor se invierte:\npuerta_abierta = NO
+      puerta_abierta"
+  - note: 'Fragmento BOOLEANO (detras de la meta: pasa de largo y vuelve)'
+    chapter: 0
+    level: 3
+    column: 1
+    row: 2
+    kind: 0
+    fragmentId: booleano
+    terminalPages: []
+  - note: "Fragmento FUNCI\xD3N"
+    chapter: 0
+    level: 4
+    column: 2
+    row: 2
+    kind: 0
+    fragmentId: funcion
+    terminalPages: []
+  - note: 'Terminal 3: eficiencia'
+    chapter: 0
+    level: 5
+    column: 4
+    row: 2
+    kind: 1
+    fragmentId: 
+    terminalPages:
+    - '> TERMINAL 03: EFICIENCIA
+
+      Dos programas pueden dar el mismo resultado
+      con distinta cantidad de pasos.'
+    - "REPETIR 4 VECES\n  mover(derecha)\nREPETIR 4 VECES\n  mover(abajo)"
+    - "8 instrucciones, ni una m\xE1s.\nUn buen algoritmo no desperdicia pasos."
+--- !u!114 &1169547727
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a5791d0dede3234f9bc0e4dd9db51c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  canvas: {fileID: 0}
+  queue: {fileID: 0}
+  runner: {fileID: 0}
+  startMenu: {fileID: 0}
+  corner: 1
+  margin: {x: 14, y: 14}
+  uiScale: 1
+  maxVisibleLines: 11
+  fontSize: 12
+  floatEffect: 1
+  floatAmplitude: {x: 3, y: 5}
+  floatSpeed: 0.8
+  floatTilt: 0.5
+  title: "PSEUDOC\xD3DIGO"
+  emptyHint: // arma tus instrucciones
+  crashError: "// ERROR en la instrucci\xF3n {0}: choque con un muro"
+  shortError: '// ERROR: no llegaste a la meta'
+  borderColor: {r: 1, g: 1, b: 1, a: 1}
+  fillColor: {r: 0, g: 0, b: 0, a: 1}
+  keywordColor: {r: 0.4, g: 1, b: 0.9, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  doneColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
+  activeColor: {r: 1, g: 0.92, b: 0.2, a: 1}
+  errorColor: {r: 1, g: 0.35, b: 0.4, a: 1}
+  hintColor: {r: 0.55, g: 0.55, b: 0.55, a: 1}
+  headerColor: {r: 0.08, g: 0.32, b: 0.36, a: 1}
+--- !u!114 &1169547728
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 39961674f34bcdc4e9a0df551cfd08e4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  useCinematic: 1
+  level: {fileID: 0}
+  cam: {fileID: 0}
+  hideObjectNames:
+  - DialogueBox
+  - DialogueBoxBorder
+  - CommandQueue
+  - InstructionPanel
+  enterDuration: 0.55
+  exitDuration: 0.45
+  fillFraction: 0.94
+  verticalCenter: 0.5
+  leftPadding: 24
+  panelGap: 22
+  hudGap: 12
 --- !u!1 &1286255127
 GameObject:
   m_ObjectHideFlags: 0

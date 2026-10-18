@@ -56,6 +56,7 @@ public class RunCinematic : MonoBehaviour
     private bool active;
     private bool menusHeld;
     private float currentE;
+    private float currentFadeE;
     private Vector3 lastCamPos;
     private bool warnedCamera;
 
@@ -143,6 +144,9 @@ public class RunCinematic : MonoBehaviour
     void LateUpdate()
     {
         if (active && zoomCamera && cam != null) ApplyCamera(currentE);
+
+        // Los cuadros escondidos tambien se reafirman al final del cuadro, por si otro script les cambia la transparencia
+        if (active || menusHeld) SetFades(currentFadeE);
     }
 
     private void ApplyCamera(float e)
@@ -167,6 +171,7 @@ public class RunCinematic : MonoBehaviour
     private void Apply(float e, float fadeE)
     {
         currentE = e;
+        currentFadeE = fadeE;
 
         SetFades(fadeE);
 
@@ -217,8 +222,9 @@ public class RunCinematic : MonoBehaviour
             foreach (RectTransform rt in all)
             {
                 if (rt.name != n) continue;
-                Canvas c = rt.GetComponentInParent<Canvas>(true);
-                if (c == null || c.rootCanvas != root) continue;
+                // Ya no se exige que sea del mismo Canvas que el HUD: en un .exe el orden en que se
+                // encuentran los Canvas puede ser distinto al del editor y los cuadros no se escondian.
+                if (rt.GetComponentInParent<Canvas>(true) == null) continue;
 
                 found = true;
                 CanvasGroup g = rt.GetComponent<CanvasGroup>();
