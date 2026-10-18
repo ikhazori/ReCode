@@ -45,6 +45,22 @@ public class ScreenEffects : MonoBehaviour
     [Tooltip("Cuanto tiembla la camara mientras hay estatica (unidades del mundo).")]
     public float staticCameraJitter = 0.05f;
 
+    [Header("Sonido del rebobinado")]
+    [Tooltip("Marcado = suena como una cinta rebobinando (zumbido que se acelera). Desmarcado = el 'shhh' de ruido blanco de antes.")]
+    public bool rewindWhirr = true;
+    [Range(0f, 1f)] public float rewindSoundVolume = 0.4f;
+    [Tooltip("Cuanto sube el tono por segundo mientras rebobina (como una cinta que acelera).")]
+    public float rewindPitchRise = 0.6f;
+
+    [Header("Flotar de la cuadricula (el mundo se mece suave, como los iconos)")]
+    public bool floatWorld = true;
+    [Tooltip("Cuanto se mueve de lado a lado (unidades del mundo).")]
+    public float floatAmplitudeX = 0.03f;
+    [Tooltip("Cuanto se mueve de arriba a abajo (unidades del mundo).")]
+    public float floatAmplitudeY = 0.06f;
+    [Tooltip("Mas bajo = mas tranquilo.")]
+    public float floatSpeed = 1.2f;
+
     [Header("Destello blanco (justo al llegar al inicio del rebobinado)")]
     public float rewindFlashDuration = 0.15f;
     [Range(0f, 1f)] public float rewindFlashMaxAlpha = 0.9f;
@@ -56,7 +72,11 @@ public class ScreenEffects : MonoBehaviour
     private bool staticActive;
     private float staticFade;
     private float staticTimer;
+    private float rewindAge;
     private Vector3 camBaseline;
+
+    /// <summary>Desplazamiento actual de la camara por el "flotar" (la camara va al reves de lo que se ve moverse la cuadricula).</summary>
+    public Vector3 FloatOffset { get; private set; }
 
     void Awake()
     {
@@ -98,14 +118,33 @@ public class ScreenEffects : MonoBehaviour
         noiseSource.playOnAwake = false;
         noiseSource.loop = true;
         noiseSource.volume = 0f;
-        noiseSource.clip = BuildNoiseClip(1f);
+        noiseSource.clip = rewindWhirr ? BuildRewindClip() : BuildNoiseClip(1f);
     }
 
     void Update()
     {
+        // La camara se mece un poquito: como el fondo va pegado a la camara, solo se mueve
+        // el mundo (cuadricula + jugador), y la interfaz se queda quieta.
+        if (floatWorld)
+        {
+            float ft = Time.time * floatSpeed;
+            FloatOffset = new Vector3(-Mathf.Sin(ft * 0.8f + 1.3f) * floatAmplitudeX, -Mathf.Sin(ft) * floatAmplitudeY, 0f);
+        }
+        else
+        {
+            FloatOffset = Vector3.zero;
+        }
+
         // Fundido suave de la estatica: sube cuando esta activa, baja cuando se apaga
         // (asi no aparece/desaparece de golpe).
         staticFade = Mathf.MoveTowards(staticFade, staticActive ? 1f : 0f, Time.deltaTime * 8f);
+
+        // El zumbido del rebobinado sube de tono poco a poco (la cinta va acelerando)
+        if (staticActive && rewindWhirr && noiseSource != null)
+        {
+            rewindAge += Time.deltaTime;
+            noiseSource.pitch = Mathf.Min(1.9f, 0.9f + rewindAge * rewindPitchRise);
+        }
 
         if (staticFade > 0.001f)
         {
@@ -129,14 +168,14 @@ public class ScreenEffects : MonoBehaviour
             if (cam != null)
             {
                 Vector2 j = Random.insideUnitCircle * staticCameraJitter * staticFade;
-                cam.transform.position = camBaseline + new Vector3(j.x, j.y, 0f);
+                cam.transform.position = camBaseline + FloatOffset + new Vector3(j.x, j.y, 0f);
             }
         }
         else
         {
             // Asegura que quede totalmente invisible (no solo "casi cero").
             staticOverlay.color = new Color(1f, 1f, 1f, 0f);
-            if (cam != null) cam.transform.position = camBaseline;
+            if (cam != null) cam.transform.position = camBaseline + FloatOffset;
         }
     }
 
@@ -153,20 +192,24 @@ public class ScreenEffects : MonoBehaviour
         staticFade = 0f;
         if (staticOverlay != null) staticOverlay.color = new Color(1f, 1f, 1f, 0f);
         if (noiseSource != null) noiseSource.Stop();
+        MusicManager.SetRewind(false);
 
         if (flash != null) flash.color = new Color(flash.color.r, flash.color.g, flash.color.b, 0f);
-        if (cam != null) cam.transform.position = camBaseline;
+        if (cam != null) cam.transform.position = camBaseline + FloatOffset;
     }
 
     /// <summary>Prende o apaga la estatica de rebobinado (ruido en pantalla + "shhh" + temblor leve de camara).</summary>
     public void SetRewindStatic(bool active)
     {
         staticActive = active;
+        MusicManager.SetRewind(active); // la musica de fondo baja y se pone grave mientras dura
         if (noiseSource == null) return;
 
         if (active)
         {
-            noiseSource.volume = 0.4f;
+            rewindAge = 0f;
+            noiseSource.pitch = rewindWhirr ? 0.9f : 1f;
+            noiseSource.volume = (rewindWhirr ? rewindSoundVolume : 0.4f) * GameSettings.Sfx;
             if (!noiseSource.isPlaying) noiseSource.Play();
         }
         else
@@ -217,6 +260,30 @@ public class ScreenEffects : MonoBehaviour
         float[] data = new float[n];
         for (int i = 0; i < n; i++) data[i] = Random.Range(-0.4f, 0.4f);
         AudioClip clip = AudioClip.Create("staticNoise", n, 1, rate, false);
+        clip.SetData(data, 0);
+        return clip;
+    }
+
+    // Cinta rebobinando: dos zumbidos con vibrato + aleteo del motor + un poco de siseo.
+    // Todas las frecuencias son enteras y el clip dura 1 s, asi que el bucle no hace "click".
+    private static AudioClip BuildRewindClip()
+    {
+        int rate = 44100;
+        int n = rate;
+        float tau = Mathf.PI * 2f;
+        float[] data = new float[n];
+        float hiss = 0f;
+        for (int i = 0; i < n; i++)
+        {
+            float t = i / (float)rate;
+            float whine1 = Mathf.Sin(tau * 600f * t + 5f * Mathf.Sin(tau * 7f * t));
+            float whine2 = Mathf.Sin(tau * 900f * t + 3f * Mathf.Sin(tau * 11f * t)) * 0.6f;
+            float flutter = 0.7f + 0.3f * Mathf.Sin(tau * 23f * t);
+            hiss = hiss * 0.8f + Random.Range(-1f, 1f) * 0.2f;
+            float s = (whine1 + whine2) * 0.5f * flutter + hiss * 0.6f;
+            data[i] = Mathf.Clamp(s, -1f, 1f) * 0.45f;
+        }
+        AudioClip clip = AudioClip.Create("rewindWhirr", n, 1, rate, false);
         clip.SetData(data, 0);
         return clip;
     }
@@ -289,7 +356,7 @@ public class ScreenEffects : MonoBehaviour
             uiItems.Add(rt);
             uiOriginals.Add(rt.anchoredPosition);
         }
-        Vector3 camOrigin = cam != null ? cam.transform.position : Vector3.zero;
+        Vector3 camOrigin = cam != null ? camBaseline : Vector3.zero; // (el flotar se suma aparte, cada cuadro)
 
         float t = 0f;
         while (t < duration)
@@ -311,7 +378,7 @@ public class ScreenEffects : MonoBehaviour
             if (cam != null)
             {
                 Vector2 shake = Random.insideUnitCircle * cameraShake * falloff;
-                cam.transform.position = camOrigin + new Vector3(shake.x, shake.y, 0f);
+                cam.transform.position = camOrigin + FloatOffset + new Vector3(shake.x, shake.y, 0f);
             }
 
             yield return null;
@@ -319,7 +386,7 @@ public class ScreenEffects : MonoBehaviour
 
         // Restaurar todo
         for (int i = 0; i < uiItems.Count; i++) uiItems[i].anchoredPosition = uiOriginals[i];
-        if (cam != null) cam.transform.position = camOrigin;
+        if (cam != null) cam.transform.position = camOrigin + FloatOffset;
         flash.color = new Color(flashColor.r, flashColor.g, flashColor.b, 0f);
     }
 }

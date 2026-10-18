@@ -63,7 +63,6 @@ public class PauseMenuUI : MonoBehaviour
     private RectTransform levelListContent;
     private RectTransform viewportRt;
 
-    private TextMeshProUGUI heartTmp;
     private RectTransform heartRt;
     private Vector2 heartTarget;
 
@@ -96,6 +95,8 @@ public class PauseMenuUI : MonoBehaviour
 
     void Update()
     {
+        if (OptionsMenuUI.IsOpen) return; // las opciones estan abiertas encima
+
         if (Input.GetKeyDown(pauseKey))
         {
             if (!isPaused) OpenMain();
@@ -180,7 +181,7 @@ public class PauseMenuUI : MonoBehaviour
     private void Resume()
     {
         isPaused = false;
-        Time.timeScale = 1f;
+        Time.timeScale = GameSettings.Speed; // 1x, 1.5x, 2x... segun Opciones
 
         if (queue != null) queue.Locked = prevQueueLocked;
         SetNavigatorsLocked(false);
@@ -196,7 +197,7 @@ public class PauseMenuUI : MonoBehaviour
         // La opcion "Escoger nivel" se bloquea si hay una secuencia en curso
         // (evita elegir un nivel nuevo a mitad de una animacion).
         mainEntries[1].locked = !CanSelectLevels();
-        mainEntries[2].locked = startMenu == null || !CanSelectLevels(); // "Menu principal"
+        mainEntries[3].locked = startMenu == null || !CanSelectLevels(); // "Menu principal"
 
         heartRt.SetParent(mainPanel.transform, false);
         activeEntries = mainEntries;
@@ -225,6 +226,11 @@ public class PauseMenuUI : MonoBehaviour
         if (levelManager == null) return;
         Resume();
         levelManager.GoToLevel(chapterIndex, levelIndex);
+    }
+
+    private void OpenOptions()
+    {
+        OptionsMenuUI.Show();
     }
 
     private void GoToMainMenu()
@@ -289,17 +295,17 @@ public class PauseMenuUI : MonoBehaviour
         ort.offsetMax = Vector2.zero;
         overlayGo.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0.75f);
 
-        // Corazon: un solo caracter TMP en forma de corazon, se reutiliza y se reparenta
-        // segun el panel activo (asi se mueve junto con el scroll de la lista de niveles).
-        GameObject heartGo = new GameObject("Heart", typeof(RectTransform), typeof(TextMeshProUGUI));
+        // Corazon: sprite pixel (el mismo del juego), no un caracter de texto: la fuente pixel no trae el
+        // simbolo del corazon. Se reutiliza y se reparenta segun el panel activo (asi se mueve junto
+        // con el scroll de la lista de niveles).
+        GameObject heartGo = new GameObject("Heart", typeof(RectTransform), typeof(Image));
         heartRt = (RectTransform)heartGo.transform;
-        heartTmp = heartGo.GetComponent<TextMeshProUGUI>();
-        heartTmp.text = "\u2665"; // ♥
-        heartTmp.color = new Color(0.85f, 0.15f, 0.2f);
-        heartTmp.fontSize = heartFontSize;
-        heartTmp.alignment = TextAlignmentOptions.Center;
-        heartTmp.raycastTarget = false;
-        heartRt.sizeDelta = new Vector2(30f, 30f);
+        Image heartImg = heartGo.GetComponent<Image>();
+        heartImg.sprite = PixelSprites.Heart();
+        heartImg.preserveAspect = true;
+        heartImg.color = new Color(0.85f, 0.15f, 0.2f);
+        heartImg.raycastTarget = false;
+        heartRt.sizeDelta = new Vector2(heartFontSize + 4f, heartFontSize + 4f);
         heartRt.anchorMin = new Vector2(0.5f, 0.5f);
         heartRt.anchorMax = new Vector2(0.5f, 0.5f);
 
@@ -312,15 +318,16 @@ public class PauseMenuUI : MonoBehaviour
 
     private void BuildMainPanel(Transform parent)
     {
-        mainPanel = CreatePanel(parent, new Vector2(420f, 300f));
+        mainPanel = CreatePanel(parent, new Vector2(420f, 340f));
 
-        CreateLabel(mainPanel.transform, "PAUSA", 28f, new Vector2(0f, 110f), new Vector2(380f, 50f));
+        CreateLabel(mainPanel.transform, "PAUSA", 28f, new Vector2(0f, 135f), new Vector2(380f, 50f));
 
         mainEntries.Clear();
-        mainEntries.Add(CreateMainEntry("Reanudar", new Vector2(0f, 40f), Resume));
-        mainEntries.Add(CreateMainEntry("Escoger nivel", new Vector2(0f, -4f), OpenLevelSelect));
-        mainEntries.Add(CreateMainEntry("Menú principal", new Vector2(0f, -48f), GoToMainMenu));
-        mainEntries.Add(CreateMainEntry("Salir del juego", new Vector2(0f, -92f), QuitGame));
+        mainEntries.Add(CreateMainEntry("Reanudar", new Vector2(0f, 60f), Resume));
+        mainEntries.Add(CreateMainEntry("Escoger nivel", new Vector2(0f, 16f), OpenLevelSelect));
+        mainEntries.Add(CreateMainEntry("Opciones", new Vector2(0f, -28f), OpenOptions));
+        mainEntries.Add(CreateMainEntry("Menú principal", new Vector2(0f, -72f), GoToMainMenu));
+        mainEntries.Add(CreateMainEntry("Salir del juego", new Vector2(0f, -116f), QuitGame));
     }
 
     private MenuEntry CreateMainEntry(string label, Vector2 anchoredPos, System.Action onConfirm)

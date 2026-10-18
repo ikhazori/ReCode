@@ -4,8 +4,8 @@ using TMPro;
 
 /// <summary>
 /// Secuencia de dialogo estilo Undertale: entra un personaje deslizandose desde la
-/// izquierda, el cuadro se abre y el texto se escribe letra por letra. Z (o Enter)
-/// completa la frase si aun se esta escribiendo, o pasa a la siguiente si ya termino.
+/// izquierda, el cuadro se abre y el texto se escribe letra por letra. E, Z, Enter o Espacio
+/// completan la frase si aun se esta escribiendo, o pasa a la siguiente si ya termino.
 /// Al final el cuadro se cierra, el personaje se va y vuelven las opciones.
 /// </summary>
 public class DialogueController : MonoBehaviour
@@ -54,6 +54,21 @@ public class DialogueController : MonoBehaviour
     [Tooltip("Segundos que tarda la musica en apagarse cuando el personaje se va.")]
     public float musicFadeOut = 0.8f;
 
+    [Header("Estilo Undertale")]
+    [Tooltip("Agrega '* ' al inicio de cada frase (si no lo tiene), como en Undertale.")]
+    public bool asteriskPrefix = true;
+
+    [Header("Interaccion con el guia (tecla E)")]
+    [Tooltip("Si esta marcado, cuando el guia llega flota 'Presiona E para hablar' y el dialogo empieza al pulsar E.")]
+    public bool requireTalkPrompt = true;
+    public string talkPrompt = "Presiona E para hablar";
+    [Tooltip("El Canvas donde flota el indicador. Se busca solo.")]
+    public Canvas canvas;
+
+    /// <summary>True mientras hay un dialogo o un panel de terminal abierto (evita que se abran dos a la vez).</summary>
+    public bool IsPlaying { get; private set; }
+
+    private GuideIdle guideIdle;
     private AudioSource audioSource;
     private AudioSource musicSource;
     private Coroutine musicRoutine;
@@ -61,6 +76,7 @@ public class DialogueController : MonoBehaviour
     void Awake()
     {
         if (battleBox == null) battleBox = FindFirstObjectByType<BattleBoxController>();
+        if (canvas == null) canvas = character != null ? character.GetComponentInParent<Canvas>() : FindFirstObjectByType<Canvas>();
 
         if (music != null)
         {
@@ -78,7 +94,8 @@ public class DialogueController : MonoBehaviour
         }
         if (character != null)
         {
-            if (character.GetComponent<GuideIdle>() == null) character.gameObject.AddComponent<GuideIdle>();
+            guideIdle = character.GetComponent<GuideIdle>();
+            if (guideIdle == null) guideIdle = character.gameObject.AddComponent<GuideIdle>();
             character.gameObject.SetActive(false);
         }
     }
@@ -91,37 +108,99 @@ public class DialogueController : MonoBehaviour
 
     public IEnumerator PlayDialogue(string[] lines)
     {
-        if (battleBox == null || character == null || lines == null) yield break;
+        if (IsPlaying || battleBox == null || character == null || lines == null) yield break;
+        IsPlaying = true;
 
-        // 1. Entra el personaje desde la izquierda hasta su posicion
-        float offscreenX = GetOffscreenX();
-        character.anchoredPosition = new Vector2(offscreenX, characterPosition.y);
-        character.gameObject.SetActive(true);
-        StartMusic(); // aparece el personaje -> empieza la musica
-        yield return Slide(offscreenX, characterPosition.x);
-
-        // 2. El cuadro se cierra, cambia a modo mensaje y se abre
-        yield return battleBox.CloseBox();
-        battleBox.ShowMessageContent("");
-        yield return battleBox.OpenBox();
-
-        // 3. Cada frase: se escribe, y Z para pasar a la siguiente
-        foreach (string line in lines)
+        try
         {
-            yield return TypeLine(line);
-            yield return WaitForConfirm();
-        }
+            // 1. Entra el personaje desde la izquierda hasta su posicion
+            float offscreenX = GetOffscreenX();
+            character.anchoredPosition = new Vector2(offscreenX, characterPosition.y);
+            character.gameObject.SetActive(true);
+            StartMusic(); // aparece el personaje -> empieza la musica
+            if (musicSource != null) MusicManager.Duck(true); // la musica de los niveles cede ante el tema del guia
+            yield return Slide(offscreenX, characterPosition.x);
 
-        // 4. El cuadro se cierra y vuelve a las opciones; el personaje se va
-        if (stopMusicWhenGuideLeaves) StopMusic();
-        yield return battleBox.CloseBox();
-        battleBox.ShowOptionsContent();
-        if (characterExits)
-        {
-            yield return Slide(characterPosition.x, offscreenX);
+            // 1b. El guia espera: flota "Presiona E para hablar"
+            if (requireTalkPrompt) yield return WaitForTalk();
+
+            // 2. El cuadro se cierra, cambia a modo mensaje y se abre
+            yield return battleBox.CloseBox();
+            battleBox.ShowMessageContent("");
+            yield return battleBox.OpenBox();
+
+            // 3. Cada frase: se escribe, y E / Z / Enter / Espacio para pasar a la siguiente
+            foreach (string line in lines)
+            {
+                yield return TypeLine(line, true);
+                yield return WaitForConfirm();
+            }
+
+            // 4. El cuadro se cierra y vuelve a las opciones; el personaje se va
+            if (stopMusicWhenGuideLeaves)
+            {
+                StopMusic();
+                MusicManager.Duck(false); // vuelve la musica de los niveles (fundido cruzado)
+            }
+            yield return battleBox.CloseBox();
+            battleBox.ShowOptionsContent();
+            if (characterExits)
+            {
+                yield return Slide(characterPosition.x, offscreenX);
+            }
+            character.gameObject.SetActive(false);
+            yield return battleBox.OpenBox();
         }
-        character.gameObject.SetActive(false);
-        yield return battleBox.OpenBox();
+        finally
+        {
+            PromptBubble.HideIfExists();
+            IsPlaying = false;
+        }
+    }
+
+    /// <summary>
+    /// Panel de una terminal: sin personaje, solo el cuadro de abajo con el texto escribiendose
+    /// letra por letra. Cada elemento de 'pages' es una pagina; E / Z / Enter / Espacio avanza.
+    /// </summary>
+    public IEnumerator PlayTerminal(string[] pages)
+    {
+        if (IsPlaying || battleBox == null || pages == null || pages.Length == 0) yield break;
+        IsPlaying = true;
+
+        try
+        {
+            yield return battleBox.CloseBox();
+            battleBox.ShowMessageContent("");
+            yield return battleBox.OpenBox();
+
+            foreach (string page in pages)
+            {
+                yield return TypeLine(page, false); // las terminales no llevan el '* ' del guia
+                yield return WaitForConfirm();
+            }
+
+            yield return battleBox.CloseBox();
+            battleBox.ShowOptionsContent();
+            yield return battleBox.OpenBox();
+        }
+        finally
+        {
+            IsPlaying = false;
+        }
+    }
+
+    // El guia ya esta en pantalla: flota el indicador y se espera a que el jugador pulse E.
+    private IEnumerator WaitForTalk()
+    {
+        PromptBubble bubble = PromptBubble.Get(canvas);
+        if (bubble != null) bubble.ShowAtRect(character, talkPrompt);
+        SoundFX.Blip();
+
+        while (!ConfirmPressed()) yield return null;
+
+        if (bubble != null) bubble.Hide();
+        SoundFX.Confirm();
+        yield return null; // consume la pulsacion
     }
 
     // ---------- Musica de fondo ----------
@@ -135,7 +214,7 @@ public class DialogueController : MonoBehaviour
             musicSource.volume = 0f;
             musicSource.Play();
         }
-        musicRoutine = StartCoroutine(FadeMusic(musicVolume, musicFadeIn));
+        musicRoutine = StartCoroutine(FadeMusic(musicVolume * GameSettings.Music, musicFadeIn));
     }
 
     private void StopMusic()
@@ -164,10 +243,10 @@ public class DialogueController : MonoBehaviour
         musicSource.volume = target;
     }
 
-    private IEnumerator TypeLine(string line)
+    private IEnumerator TypeLine(string line, bool guideStyle)
     {
         TMP_Text tmp = battleBox.messageText;
-        tmp.text = line;
+        tmp.text = guideStyle ? FormatLine(line) : line;
         tmp.maxVisibleCharacters = 0;
         tmp.ForceMeshUpdate();
         int total = tmp.textInfo.characterCount;
@@ -222,9 +301,12 @@ public class DialogueController : MonoBehaviour
         return -(halfScreen + character.rect.width / 2f + 20f);
     }
 
+    // Z / Enter (estilo Undertale) y tambien E / Espacio. En pausa (timeScale 0) no lee nada.
     private static bool ConfirmPressed()
     {
-        return Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(KeyCode.Return);
+        if (Time.timeScale <= 0f) return false;
+        return Input.GetKeyDown(KeyCode.Z) || Input.GetKeyDown(KeyCode.Return)
+            || Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Space);
     }
 
     private static bool IsPause(char c)
@@ -232,10 +314,17 @@ public class DialogueController : MonoBehaviour
         return c == '.' || c == ',' || c == '!' || c == '?' || c == '…';
     }
 
+    private string FormatLine(string line)
+    {
+        if (!asteriskPrefix || string.IsNullOrEmpty(line)) return line;
+        return line.TrimStart().StartsWith("*") ? line : "* " + line;
+    }
+
     private void PlayBlip()
     {
+        if (guideIdle != null) guideIdle.Pulse(); // el guia "mueve la boca" con cada letra
         if (audioSource == null || blipSound == null) { SoundFX.Blip(); return; }
         audioSource.pitch = Random.Range(0.95f, 1.05f);
-        audioSource.PlayOneShot(blipSound, blipVolume);
+        audioSource.PlayOneShot(blipSound, blipVolume * GameSettings.Sfx);
     }
 }

@@ -19,6 +19,8 @@ public class LevelRunner : MonoBehaviour
     public DialogueController dialogue;
     [Tooltip("Opcional. De aqui salen las frases del guia de cada nivel.")]
     public LevelManager levelManager;
+    [Tooltip("Opcional. Fragmentos y terminales del nivel (se busca solo).")]
+    public LevelExtras extras;
 
     [Header("Rebobinado (cuando la secuencia termina y no llegaste a la meta)")]
     [Tooltip("Cuanto tarda cada paso al retroceder. Mas bajo = mas rapido (efecto camara rapida).")]
@@ -46,6 +48,13 @@ public class LevelRunner : MonoBehaviour
     /// <summary>True mientras se esta ejecutando una secuencia (moviendose, chocando, ganando o rebobinando).</summary>
     public bool IsBusy => running;
 
+    /// <summary>Indice de la instruccion que se esta ejecutando (-1 si ninguna). Lo lee PseudocodePanel.</summary>
+    public int CurrentInstruction { get; private set; } = -1;
+    /// <summary>Indice de la instruccion que choco (-1 si no hubo choque).</summary>
+    public int CrashedInstruction { get; private set; } = -1;
+    /// <summary>true si la secuencia termino pero no llegaste a la meta.</summary>
+    public bool EndedShort { get; private set; }
+
     private bool running;
     private Vector2Int currentCell;
     private bool stepCrashed;
@@ -59,6 +68,7 @@ public class LevelRunner : MonoBehaviour
         if (background == null) background = FindFirstObjectByType<AnimatedBackground>();
         if (dialogue == null) dialogue = FindFirstObjectByType<DialogueController>();
         if (levelManager == null) levelManager = FindFirstObjectByType<LevelManager>();
+        if (extras == null) extras = FindFirstObjectByType<LevelExtras>();
 
         currentCell = level.StartCell;
         queue.OnRunRequested.AddListener(Run);
@@ -79,6 +89,7 @@ public class LevelRunner : MonoBehaviour
         currentCell = level.StartCell;
         level.ResetPlayer();
         level.ClearVisited();
+        if (extras != null) extras.DiscardRun(); // empieza limpio: ningun fragmento pendiente
 
         path.Clear();
         path.Add(currentCell);
@@ -86,12 +97,18 @@ public class LevelRunner : MonoBehaviour
 
         bool crashed = false;
 
-        foreach (Direction dir in instructions)
+        CurrentInstruction = -1;
+        CrashedInstruction = -1;
+        EndedShort = false;
+
+        for (int idx = 0; idx < instructions.Count; idx++)
         {
+            CurrentInstruction = idx;
             stepCrashed = false;
-            yield return ExecuteInstruction(dir);
-            if (stepCrashed) { crashed = true; break; }
+            yield return ExecuteInstruction(instructions[idx]);
+            if (stepCrashed) { crashed = true; CrashedInstruction = idx; break; }
         }
+        CurrentInstruction = -1;
 
         if (crashed)
         {
@@ -103,6 +120,7 @@ public class LevelRunner : MonoBehaviour
         else if (currentCell == level.GoalCell)
         {
             Debug.Log("¡Nivel completado!");
+            if (extras != null) extras.CommitRun(); // los fragmentos recogidos en esta secuencia se guardan
             OnLevelComplete?.Invoke();
 
             // Destello verde suave de victoria
@@ -123,16 +141,20 @@ public class LevelRunner : MonoBehaviour
                 else
                     yield return dialogue.PlayWinDialogue();
 
+                yield return CelebrateMissionIfDone(); // si con este nivel completaste los 5 fragmentos
+
                 level.SetVisible(true);
             }
             else
             {
                 yield return new WaitForSeconds(pauseBeforeReset);
+                yield return CelebrateMissionIfDone();
             }
         }
         else
         {
             Debug.Log("La secuencia termino pero no llegaste a la meta.");
+            EndedShort = true;
             yield return PlayRewind();
         }
 
@@ -168,6 +190,8 @@ public class LevelRunner : MonoBehaviour
             SoundFX.RewindStep();
             yield return MoveTo(from, to, duration);
             level.UnmarkVisited(path[i]);
+            // La memoria se restaura: si en esta casilla se recogio un fragmento, vuelve a aparecer
+            if (extras != null && path.IndexOf(path[i]) == i) extras.UndoCollectAt(path[i]);
 
             duration = Mathf.Max(rewindStepDuration * 0.35f, duration * 0.85f); // se acelera paso a paso
         }
@@ -179,8 +203,24 @@ public class LevelRunner : MonoBehaviour
         yield return RewindEffect.Fade(0f, rewindFadeDuration);
     }
 
+    /// <summary>Si ya guardaste los 5 fragmentos y aun no se celebro: dialogo del guia + panel de mision cumplida.</summary>
+    private IEnumerator CelebrateMissionIfDone()
+    {
+        if (!FragmentInventory.MissionComplete || FragmentInventory.MissionCelebrated) yield break;
+        FragmentInventory.MissionCelebrated = true;
+
+        GameHUDManager hud = GameHUDManager.Instance;
+        if (dialogue != null && hud != null && hud.missionGuideLines != null && hud.missionGuideLines.Length > 0)
+            yield return dialogue.PlayDialogue(hud.missionGuideLines);
+        if (hud != null) yield return hud.ShowMissionComplete();
+    }
+
     private void ResetLevel()
     {
+        if (extras != null) extras.DiscardRun(); // lo pendiente (no guardado) se devuelve al tablero
+        CurrentInstruction = -1;
+        CrashedInstruction = -1;
+        EndedShort = false;
         currentCell = level.StartCell;
         level.ResetPlayer();
         level.ShowPlayer();
@@ -236,9 +276,19 @@ public class LevelRunner : MonoBehaviour
                 level.MarkVisited(currentCell);
             }
 
+            // Fragmento en esta casilla -> se recoge. Terminal -> se detiene y espera E.
+            yield return OnArrive(currentCell);
+
             if (!level.IsIce(currentCell)) yield break; // se quedo quieto: instruccion terminada
             // si sigue en hielo, se sigue deslizando en la misma direccion (vuelve al while)
         }
+    }
+
+    private IEnumerator OnArrive(Vector2Int cell)
+    {
+        if (extras == null) yield break;
+        extras.TryCollect(cell);
+        if (extras.HasTerminal(cell)) yield return extras.PlayTerminal(cell);
     }
 
     /// <summary>Pequeño "pop" de encogerse/crecer al teletransportarse.</summary>

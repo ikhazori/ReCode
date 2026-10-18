@@ -60,19 +60,20 @@ public class StartMenuUI : MonoBehaviour
 
     [Header("Creditos (una linea por elemento; se escriben como consola)")]
     [TextArea(1, 2)]
-    public string[] credits =
+    public string[] creditLines =
     {
         "> cat creditos.txt",
         "",
         "ReCode",
-        "Un juego para aprender a programar.",
+        "Aprende pseudocódigo jugando.",
         "",
-        "Diseño y programación:  TU NOMBRE AQUI",
-        "Arte:  TU NOMBRE AQUI",
-        "Música:  TU NOMBRE AQUI",
+        "Diseño y programación:",
+        "Kenneth Santiago Ceballos Sierra",
+        "Danna Valentina Arenas Jimenez",
         "",
+        "Música: Toby Fox (Undertale)",
+        "y Balatro (LouisF)",
         "Hecho con Unity.",
-        "Inspirado en Undertale.",
         "",
         "> presiona X para volver_"
     };
@@ -109,6 +110,8 @@ public class StartMenuUI : MonoBehaviour
     private enum State { Intro, TitleWait, Menu, Credits, Busy, Closed }
     private State state = State.Closed;
 
+    public bool IsMenuActive => state != State.Closed;
+
     private class MenuItem
     {
         public string label, hint;
@@ -119,8 +122,8 @@ public class StartMenuUI : MonoBehaviour
 
     private const string SaveKeyPrefix = "ReCode_Completed_"; // igual que LevelManager
     private const string GlitchChars = "01#$%&@?/|";
-    private const float BoxWidth = 800f, BoxHeight = 210f;
-    private const float EntryLeft = -330f, EntryWidth = 260f, EntrySpacing = 46f;
+    private const float BoxWidth = 880f, BoxHeight = 290f;
+    private const float EntryLeft = -380f, EntryWidth = 320f, EntrySpacing = 50f;
 
     private GameObject root;
     private CanvasGroup group;
@@ -212,6 +215,7 @@ public class StartMenuUI : MonoBehaviour
                 break;
 
             case State.Menu:
+                if (OptionsMenuUI.IsOpen) break; // las opciones estan abiertas encima
                 if (Input.GetKeyDown(KeyCode.DownArrow)) MoveSelection(1);
                 else if (Input.GetKeyDown(KeyCode.UpArrow)) MoveSelection(-1);
                 else if (confirm) { SoundFX.Confirm(); items[selected].action?.Invoke(); }
@@ -221,6 +225,10 @@ public class StartMenuUI : MonoBehaviour
 
         if (boxRt.gameObject.activeSelf)
             heartRt.anchoredPosition = Vector2.Lerp(heartRt.anchoredPosition, heartTarget, Time.deltaTime * 20f);
+
+        // Si no hay un fundido en curso, la musica sigue en vivo el volumen elegido en Opciones
+        if (musicSource != null && musicSource.isPlaying && musicRoutine == null)
+            musicSource.volume = musicVolume * GameSettings.Music;
     }
 
     // ---------------------------------------------------------------- secuencia de intro
@@ -400,6 +408,7 @@ public class StartMenuUI : MonoBehaviour
             list.Add(new MenuItem { label = "Jugar", hint = "* Empezar la misión.", action = () => StartCoroutine(StartRoutine(0, 0)) });
         }
 
+        list.Add(new MenuItem { label = "Opciones", hint = "* Música, efectos y velocidad.", action = () => OptionsMenuUI.Show() });
         list.Add(new MenuItem { label = "Créditos", hint = "* Quién está detrás del código.", action = () => StartCoroutine(ShowCredits()) });
         list.Add(new MenuItem { label = "Salir", hint = "* Apagar el programa.", action = QuitGame });
         return list;
@@ -416,7 +425,7 @@ public class StartMenuUI : MonoBehaviour
             },
             new MenuItem
             {
-                label = "Borrar y empezar", hint = "* Esto borrará todo.\n  No hay vuelta atrás.",
+                label = "Borrar todo", hint = "* Esto borrará todo.\n  No hay vuelta atrás.",
                 action = () => { ResetProgress(); StartCoroutine(StartRoutine(0, 0)); }
             }
         };
@@ -448,7 +457,7 @@ public class StartMenuUI : MonoBehaviour
             items[i].text.color = i == selected ? selectedColor : normalColor;
 
         MenuItem sel = items[selected];
-        heartTarget = new Vector2(EntryLeft - 24f, sel.rt.anchoredPosition.y);
+        heartTarget = new Vector2(EntryLeft - 26f, sel.rt.anchoredPosition.y);
         if (snapHeart) heartRt.anchoredPosition = heartTarget;
 
         if (hintRoutine != null) StopCoroutine(hintRoutine);
@@ -465,8 +474,8 @@ public class StartMenuUI : MonoBehaviour
         for (int i = 0; i < newItems.Count; i++)
         {
             MenuItem it = newItems[i];
-            it.text = CreateText(boxRt, "Entry_" + it.label, 30f, new Vector2(EntryLeft + EntryWidth / 2f, startY - i * EntrySpacing),
-                                 new Vector2(EntryWidth + 60f, 40f), TextAlignmentOptions.Left, normalColor);
+            it.text = CreateText(boxRt, "Entry_" + it.label, 26f, new Vector2(EntryLeft + EntryWidth / 2f, startY - i * EntrySpacing),
+                                 new Vector2(EntryWidth, 40f), TextAlignmentOptions.Left, normalColor);
             it.text.text = it.label;
             it.text.textWrappingMode = TextWrappingModes.NoWrap;
             it.rt = it.text.rectTransform;
@@ -499,6 +508,7 @@ public class StartMenuUI : MonoBehaviour
         // Arranca el nivel (con su pantalla intermedia) mientras el menu se desvanece
         StartLevel(chapter, level);
         Lock(false);
+        Time.timeScale = GameSettings.Speed; // velocidad elegida en Opciones
         state = State.Closed;
         closing = true;
         StopMusic();
@@ -543,7 +553,7 @@ public class StartMenuUI : MonoBehaviour
         if (guideRt != null) guideRt.gameObject.SetActive(false);
 
         creditsText.gameObject.SetActive(true);
-        yield return TypeText(creditsText, string.Join("\n", credits), 0.015f, 3, false);
+        yield return TypeText(creditsText, string.Join("\n", creditLines), 0.015f, 3, false);
         state = State.Credits;
     }
 
@@ -648,6 +658,7 @@ public class StartMenuUI : MonoBehaviour
 
     private void ResetProgress()
     {
+        FragmentInventory.ResetAll(); // "Nuevo juego" tambien borra los fragmentos recogidos
         if (levelManager == null || levelManager.chapters == null) return;
         for (int c = 0; c < levelManager.chapters.Count; c++)
         {
@@ -682,7 +693,7 @@ public class StartMenuUI : MonoBehaviour
         if (musicSource == null) return;
         if (musicRoutine != null) StopCoroutine(musicRoutine);
         if (!musicSource.isPlaying) { musicSource.volume = 0f; musicSource.Play(); }
-        musicRoutine = StartCoroutine(FadeMusic(musicVolume, 1f, false));
+        musicRoutine = StartCoroutine(FadeMusic(musicVolume * GameSettings.Music, 1f, false));
     }
 
     private void StopMusic()
@@ -703,6 +714,7 @@ public class StartMenuUI : MonoBehaviour
         }
         musicSource.volume = target;
         if (stopAtEnd) musicSource.Stop();
+        musicRoutine = null;
     }
 
     // ---------------------------------------------------------------- utilidades de animacion
@@ -871,7 +883,7 @@ public class StartMenuUI : MonoBehaviour
         boxRt = (RectTransform)box.transform;
         boxRt.anchorMin = boxRt.anchorMax = new Vector2(0.5f, 0.5f);
         boxRt.sizeDelta = new Vector2(BoxWidth, BoxHeight);
-        boxRt.anchoredPosition = new Vector2(0f, -235f);
+        boxRt.anchoredPosition = new Vector2(0f, -190f);
 
         Image border = NewImage(boxRt, "Border", Color.white);
         Stretch(border.rectTransform);
@@ -884,10 +896,10 @@ public class StartMenuUI : MonoBehaviour
         Image divider = NewImage(boxRt, "Divider", new Color(1f, 1f, 1f, 0.25f));
         divider.rectTransform.anchorMin = divider.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
         divider.rectTransform.sizeDelta = new Vector2(3f, BoxHeight - 50f);
-        divider.rectTransform.anchoredPosition = new Vector2(-50f, 0f);
+        divider.rectTransform.anchoredPosition = new Vector2(-40f, 0f);
 
         // Texto de la derecha (frase al azar / descripcion de la opcion)
-        hintText = CreateText(boxRt, "Hint", 24f, new Vector2(170f, 0f), new Vector2(380f, 160f), TextAlignmentOptions.TopLeft, normalColor);
+        hintText = CreateText(boxRt, "Hint", 22f, new Vector2(200f, 0f), new Vector2(400f, 200f), TextAlignmentOptions.TopLeft, normalColor);
         hintText.text = "";
 
         // Corazon en pixel art generado por codigo

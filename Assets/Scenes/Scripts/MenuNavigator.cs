@@ -50,8 +50,22 @@ public class MenuNavigator : MonoBehaviour
     [Tooltip("Si esta en true, el menu no lee input (lo usa el PauseMenuUI mientras el juego esta en pausa).")]
     public bool externalLock = false;
 
+    [Header("Flotar de las opciones (igual que los iconos de las flechas)")]
+    public bool floatOptions = true;
+    [Tooltip("Cuanto se mueve de lado a lado (unidades del Canvas).")]
+    public float floatAmplitudeX = 1.5f;
+    [Tooltip("Cuanto se mueve de arriba a abajo (unidades del Canvas).")]
+    public float floatAmplitudeY = 2.5f;
+    [Tooltip("Mas bajo = mas tranquilo.")]
+    public float floatSpeed = 2f;
+
     private int currentIndex = 0;
     private Vector2 heartTargetPos;
+
+    private Vector2[] basePos;
+    private float[] phaseX;
+    private float[] phaseY;
+    private bool floatReady;
 
     void Start()
     {
@@ -69,6 +83,7 @@ public class MenuNavigator : MonoBehaviour
         {
             if (o != null) o.ForceMeshUpdate();
         }
+        CaptureBasePositions();
         UpdateSelection();
         if (heartIcon != null)
         {
@@ -137,14 +152,52 @@ public class MenuNavigator : MonoBehaviour
             }
         }
 
+        ApplyFloat();
+
         // Desliza el corazon suavemente hacia su posicion objetivo cada frame
+        // (le suma el flotar de la opcion elegida para que la acompañe)
         if (heartIcon != null)
         {
             heartIcon.anchoredPosition = Vector2.Lerp(
                 heartIcon.anchoredPosition,
-                heartTargetPos,
+                heartTargetPos + FloatOf(currentIndex),
                 Time.deltaTime * heartMoveSpeed
             );
+        }
+    }
+
+    // ---------- Flotar de las opciones ----------
+
+    private void CaptureBasePositions()
+    {
+        int n = options.Length;
+        basePos = new Vector2[n];
+        phaseX = new float[n];
+        phaseY = new float[n];
+        for (int i = 0; i < n; i++)
+        {
+            if (options[i] != null) basePos[i] = options[i].rectTransform.anchoredPosition;
+            // Fases al azar para que cada opcion flote distinto a las demas
+            phaseX[i] = Random.Range(0f, Mathf.PI * 2f);
+            phaseY[i] = Random.Range(0f, Mathf.PI * 2f);
+        }
+        floatReady = true;
+    }
+
+    private Vector2 FloatOf(int i)
+    {
+        if (!floatOptions || !floatReady || i < 0 || i >= basePos.Length) return Vector2.zero;
+        float t = Time.time * floatSpeed;
+        return new Vector2(Mathf.Sin(t * 0.8f + phaseX[i]) * floatAmplitudeX, Mathf.Sin(t + phaseY[i]) * floatAmplitudeY);
+    }
+
+    private void ApplyFloat()
+    {
+        if (!floatReady) return;
+        for (int i = 0; i < options.Length; i++)
+        {
+            if (options[i] == null) continue;
+            options[i].rectTransform.anchoredPosition = basePos[i] + FloatOf(i);
         }
     }
 
@@ -163,8 +216,10 @@ public class MenuNavigator : MonoBehaviour
         targetText.ForceMeshUpdate();
         Bounds bounds = targetText.textBounds;
         float leftEdgeLocal = bounds.min.x * targetRect.localScale.x;
-        float leftEdgeX = targetRect.anchoredPosition.x + leftEdgeLocal;
-        Vector2 newTarget = new Vector2(leftEdgeX + heartOffsetX, targetRect.anchoredPosition.y + heartOffsetY);
+        // Se usa la posicion BASE (sin el flotar), porque el flotar se le suma aparte al corazon
+        Vector2 anchor = floatReady ? basePos[currentIndex] : targetRect.anchoredPosition;
+        float leftEdgeX = anchor.x + leftEdgeLocal;
+        Vector2 newTarget = new Vector2(leftEdgeX + heartOffsetX, anchor.y + heartOffsetY);
         if (float.IsNaN(newTarget.x) || float.IsNaN(newTarget.y)) return;
         heartTargetPos = newTarget;
     }

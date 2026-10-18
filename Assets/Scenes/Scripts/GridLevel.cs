@@ -20,6 +20,17 @@ public class GridLevel : MonoBehaviour
     [Tooltip("Centro de toda la cuadricula en el mundo. Si queda muy arriba o abajo, cambia la Y (con el juego detenido).")]
     public Vector2 gridCenter = new Vector2(0f, 2.7f);
 
+    public enum PlayerShape { Heart, Circle }
+
+    [Header("Estilo pixel (Undertale)")]
+    [Tooltip("Heart = el alma en forma de corazon pixelado. Circle = el circulo de antes.")]
+    public PlayerShape playerShape = PlayerShape.Circle;
+    [Tooltip("Circulos y anillos con pixeles marcados (sin suavizado), acorde al resto del estilo.")]
+    public bool pixelArtStyle = false;
+    [Tooltip("La meta es una estrella de guardado (SAVE) que titila, en vez del rombo giratorio.")]
+    public bool useSaveStar = false;
+    public Color saveStarColor = new Color(1f, 0.95f, 0.2f);
+
     [Header("Colores")]
     public Color lineColor = new Color(0.1f, 0.8f, 0.2f);
     public Color cellColor = Color.black;
@@ -75,6 +86,9 @@ public class GridLevel : MonoBehaviour
     public Vector2Int GoalCell { get; private set; }
     public Transform Player { get; private set; }
 
+    /// <summary>Raiz de todo lo que dibuja el nivel actual (se destruye al cargar otro). LevelExtras cuelga ahi sus objetos.</summary>
+    public Transform VisualsRoot => visualsRoot;
+
     private char[,] cells;
     private Transform visualsRoot;
     private Transform playerRoot;
@@ -100,15 +114,19 @@ public class GridLevel : MonoBehaviour
     private static Sprite squareSprite;
     private static Sprite circleSprite;
     private static Sprite ringSprite;
+    private static bool pixelStatic = false;
 
     void Awake()
     {
         // El jugador vive en su propia raiz, aparte de las casillas: asi se puede
         // destruir y reconstruir el tablero al cambiar de nivel sin perder al jugador.
+        pixelStatic = pixelArtStyle;
         playerRoot = new GameObject("PlayerRoot").transform;
         playerRoot.SetParent(transform, false);
 
-        GameObject player = CreateRect("Player", playerRoot, GetCircle(), Vector3.zero, Vector2.one * (cellSize * 0.7f), playerColor, 10);
+        Sprite playerSprite = playerShape == PlayerShape.Heart ? PixelSprites.Heart() : GetCircle();
+        float playerSize = playerShape == PlayerShape.Heart ? cellSize * 0.62f : cellSize * 0.7f;
+        GameObject player = CreateRect("Player", playerRoot, playerSprite, Vector3.zero, Vector2.one * playerSize, playerColor, 10);
         player.AddComponent<PlayerFX>();
         Player = player.transform;
         playerSr = player.GetComponent<SpriteRenderer>();
@@ -325,6 +343,14 @@ public class GridLevel : MonoBehaviour
         goalMark.SetParent(parent, false);
         goalMark.position = pos;
 
+        if (useSaveStar)
+        {
+            Sprite star = PixelSprites.Star();
+            CreateRect("SaveStarShadow", goalMark, star, pos, Vector2.one * (cellSize * 0.72f), new Color(0f, 0f, 0f, 0.55f), 3);
+            CreateRect("SaveStar", goalMark, star, pos, Vector2.one * (cellSize * 0.6f), saveStarColor, 4);
+            return;
+        }
+
         Sprite sq = GetSquare();
         GameObject outer = CreateRect("DiamondOuter", goalMark, sq, pos, Vector2.one * (cellSize * 0.5f), Color.white, 3);
         outer.transform.localRotation = Quaternion.Euler(0f, 0f, 45f);
@@ -358,9 +384,19 @@ public class GridLevel : MonoBehaviour
 
         if (goalMark != null)
         {
-            goalMark.rotation = Quaternion.Euler(0f, 0f, t * 40f);
-            float s = 1f + Mathf.Sin(t * 4f) * 0.08f;
-            goalMark.localScale = new Vector3(s, s, 1f);
+            if (useSaveStar)
+            {
+                // Titileo "escalonado" (5 tamaños), como un sprite de pocos cuadros
+                goalMark.rotation = Quaternion.identity;
+                float s = 1f + Mathf.Round(Mathf.Sin(t * 4f) * 2f) / 2f * 0.1f;
+                goalMark.localScale = new Vector3(s, s, 1f);
+            }
+            else
+            {
+                goalMark.rotation = Quaternion.Euler(0f, 0f, t * 40f);
+                float s = 1f + Mathf.Sin(t * 4f) * 0.08f;
+                goalMark.localScale = new Vector3(s, s, 1f);
+            }
         }
 
         float a = 0.4f + 0.6f * (Mathf.Sin(t * 3f) + 1f) / 2f;
@@ -646,8 +682,9 @@ public class GridLevel : MonoBehaviour
     {
         if (circleSprite == null)
         {
-            int size = 64;
-            Texture2D tex = new Texture2D(size, size);
+            int size = pixelStatic ? 24 : 64;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = pixelStatic ? FilterMode.Point : FilterMode.Bilinear;
             float radius = size / 2f;
             for (int y = 0; y < size; y++)
             {
@@ -669,8 +706,9 @@ public class GridLevel : MonoBehaviour
     {
         if (ringSprite == null)
         {
-            int size = 128;
-            Texture2D tex = new Texture2D(size, size);
+            int size = pixelStatic ? 64 : 128;
+            Texture2D tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.filterMode = pixelStatic ? FilterMode.Point : FilterMode.Bilinear;
             float radius = size / 2f;
             for (int y = 0; y < size; y++)
             {

@@ -8,7 +8,7 @@ using UnityEngine;
 public static class SoundFX
 {
     private static AudioSource src;
-    private static AudioClip move, confirm, step, crash, win, blip, save, rewindStep, click, teleport;
+    private static AudioClip move, confirm, step, crash, win, blip, save, rewindStep, click, teleport, pickup;
 
     private const int Rate = 44100;
 
@@ -26,12 +26,14 @@ public static class SoundFX
     public static void Click()   { Init(); Play(click, 0.45f, 1f); }
     /// <summary>Sonido "ta-doop" al teletransportarse.</summary>
     public static void Teleport(){ Init(); Play(teleport, 0.5f, 1f); }
+    /// <summary>"Ping" doble y ascendente al recoger un fragmento de codigo.</summary>
+    public static void Pickup()  { Init(); Play(pickup, 0.55f, 1f); }
 
     private static void Play(AudioClip clip, float volume, float pitch)
     {
         Init();
         src.pitch = pitch;
-        src.PlayOneShot(clip, volume);
+        src.PlayOneShot(clip, volume * GameSettings.Sfx);
     }
 
     private static void Init()
@@ -53,6 +55,7 @@ public static class SoundFX
         rewindStep = Tone(260f, 780f, 0.05f, 0.18f, false); // tono que sube (al reves del Step normal, que baja)
         click   = Tone(900f, 500f, 0.03f, 0.25f, false);
         teleport = Sequence(new float[] { 400f, 900f, 1500f }, 0.05f, 0.22f);
+        pickup  = Sequence(new float[] { 880f, 1175f, 1760f }, 0.06f, 0.22f);
     }
 
     // Una nota: frecuencia f0 -> f1, onda cuadrada (o ruido si noise = true), con fade out.

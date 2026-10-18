@@ -1419,6 +1419,10 @@ MonoBehaviour:
           m_BoolArgument: 0
         m_CallState: 2
   externalLock: 0
+  floatOptions: 1
+  floatAmplitudeX: 1.5
+  floatAmplitudeY: 2.5
+  floatSpeed: 5
 --- !u!1 &1169547712
 GameObject:
   m_ObjectHideFlags: 0
@@ -1435,6 +1439,10 @@ GameObject:
   - component: {fileID: 1169547718}
   - component: {fileID: 1169547719}
   - component: {fileID: 1169547720}
+  - component: {fileID: 1169547721}
+  - component: {fileID: 1169547722}
+  - component: {fileID: 1169547724}
+  - component: {fileID: 1169547723}
   m_Layer: 0
   m_Name: Level
   m_TagString: Untagged
@@ -1500,6 +1508,13 @@ MonoBehaviour:
   staticRefreshRate: 18
   staticResolution: 40
   staticCameraJitter: 0.05
+  rewindWhirr: 1
+  rewindSoundVolume: 0.4
+  rewindPitchRise: 0.6
+  floatWorld: 1
+  floatAmplitudeX: 0.03
+  floatAmplitudeY: 0.06
+  floatSpeed: 4
   rewindFlashDuration: 0.15
   rewindFlashMaxAlpha: 0.9
 --- !u!114 &1169547715
@@ -1520,6 +1535,10 @@ MonoBehaviour:
   - ........
   cellSize: 1
   gridCenter: {x: 0, y: 2.7}
+  playerShape: 0
+  pixelArtStyle: 1
+  useSaveStar: 0
+  saveStarColor: {r: 1, g: 0.95, b: 0.2, a: 1}
   lineColor: {r: 0.1, g: 0.8, b: 0.2, a: 1}
   cellColor: {r: 0, g: 0, b: 0, a: 1}
   goalColor: {r: 0.15, g: 0.7, b: 0.25, a: 1}
@@ -1591,6 +1610,7 @@ MonoBehaviour:
   musicFadeIn: 1
   stopMusicWhenGuideLeaves: 1
   musicFadeOut: 0.8
+  asteriskPrefix: 1
 --- !u!114 &1169547718
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1603,12 +1623,40 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3fb54d90007d6e045a911956dabec796, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  pattern: 0
   colorA: {r: 0.08, g: 0.11, b: 0.26, a: 1}
   colorB: {r: 0.11, g: 0.16, b: 0.36, a: 1}
+  driftTint: {r: 1, g: 0.78, b: 1, a: 1}
+  driftSpeed: 0.12
+  driftAmount: 0.6
   tilesAcross: 14
   scrollSpeed: {x: 0.04, y: -0.03}
+  waves: 1
+  waveStrips: 48
+  waveAmplitude: 0.3
+  waveSpeed: 1.1
+  waveFrequency: 2.5
+  waveSwell: 0.5
   pulseSpeed: 0.8
   pulseAmount: 0.15
+  farLayer: 1
+  farScale: 2.5
+  farAlpha: 0.07
+  farParallax: 0.6
+  rings: 1
+  ringCount: 5
+  ringPeriod: 7
+  ringColor: {r: 0.6, g: 0.9, b: 1, a: 1}
+  ringColorEnd: {r: 1, g: 0.6, b: 1, a: 1}
+  ringAlpha: 0.28
+  ringSpin: 8
+  floatingSquares: 1
+  squareCount: 26
+  squareColor: {r: 0.6, g: 0.9, b: 1, a: 1}
+  squareAlpha: 0.35
+  squareSpeed: {x: 12, y: 40}
+  vignette: 1
+  vignetteStrength: 0.65
   binaryRain: 1
   bleed: 40
 --- !u!114 &1169547719
@@ -1737,6 +1785,7 @@ MonoBehaviour:
   levelManager: {fileID: 0}
   runner: {fileID: 0}
   queue: {fileID: 0}
+  startMenu: {fileID: 0}
   pauseKey: 27
   confirmKey: 122
   confirmKeyAlt: 13
@@ -1748,6 +1797,165 @@ MonoBehaviour:
   heartOffsetX: -26
   heartMoveSpeed: 20
   heartFontSize: 22
+--- !u!114 &1169547721
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca0969f6f538ec14cbdcff1df102571d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  levelManager: {fileID: 0}
+  pauseMenu: {fileID: 0}
+  showOnStart: 1
+  requirePressToStart: 1
+  confirmKey: 122
+  confirmKeyAlt: 13
+  backKey: 120
+  gameTitle: ReCode
+  whiteLetters: 2
+  tagline: "Una m\xE1quina solo hace lo que le dices."
+  flavorTexts:
+  - "* El c\xF3digo no se escribe solo."
+  - "* Una m\xE1quina solo hace lo que le dices. Ni m\xE1s, ni menos."
+  - "* Tu gu\xEDa te observa. Sin parpadear."
+  - "* 0 o 1. S\xED o no. Todo empieza aqu\xED."
+  - "* Hay un error en alguna parte.\n  Siempre lo hay."
+  - "* Huele a memoria reci\xE9n formateada."
+  - "* Depurar: el arte de buscar\n  lo que t\xFA mismo escribiste."
+  credits:
+  - '> cat creditos.txt'
+  - 
+  - ReCode
+  - Un juego para aprender a programar.
+  - 
+  - "Dise\xF1o y programaci\xF3n:  TU NOMBRE AQUI"
+  - 'Arte:  TU NOMBRE AQUI'
+  - "M\xFAsica:  TU NOMBRE AQUI"
+  - 
+  - Hecho con Unity.
+  - Inspirado en Undertale.
+  - 
+  - '> presiona X para volver_'
+  backgroundColor: {r: 0.02, g: 0.03, b: 0.08, a: 1}
+  codeColor: {r: 0.25, g: 1, b: 0.45, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  selectedColor: {r: 1, g: 0.92, b: 0.2, a: 1}
+  heartColor: {r: 0.9, g: 0.1, b: 0.15, a: 1}
+  rainColor: {r: 0.2, g: 1, b: 0.4, a: 0.22}
+  scanlineAlpha: 0.22
+  bootCharDelay: 0.02
+  boxAnimDuration: 0.12
+  fadeOutDuration: 0.7
+  showGuide: 0
+  guideSprite: {fileID: 0}
+  guidePosition: {x: -470, y: 10}
+  guideSize: {x: 0, y: 0}
+  music: {fileID: 0}
+  musicVolume: 0.5
+--- !u!114 &1169547722
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 967154d2cdc9a75418aa5dda566f79e8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  font: {fileID: 11400000, guid: c45b096852f98fe488314d764b3c3679, type: 2}
+  scanInterval: 0.5
+--- !u!114 &1169547723
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca0969f6f538ec14cbdcff1df102571d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  levelManager: {fileID: 0}
+  pauseMenu: {fileID: 0}
+  showOnStart: 1
+  requirePressToStart: 1
+  confirmKey: 122
+  confirmKeyAlt: 13
+  backKey: 120
+  gameTitle: ReCode
+  whiteLetters: 2
+  tagline: "Una m\xE1quina solo hace lo que le dices."
+  flavorTexts:
+  - "* El c\xF3digo no se escribe solo."
+  - "* Una m\xE1quina solo hace lo que le dices. Ni m\xE1s, ni menos."
+  - "* Tu gu\xEDa te observa. Sin parpadear."
+  - "* 0 o 1. S\xED o no. Todo empieza aqu\xED."
+  - "* Hay un error en alguna parte.\n  Siempre lo hay."
+  - "* Huele a memoria reci\xE9n formateada."
+  - "* Depurar: el arte de buscar\n  lo que t\xFA mismo escribiste."
+  credits:
+  - '> cat creditos.txt'
+  - 
+  - ReCode
+  - Un juego para aprender a programar.
+  - 
+  - "Dise\xF1o y programaci\xF3n:  TU NOMBRE AQUI"
+  - 'Arte:  TU NOMBRE AQUI'
+  - "M\xFAsica:  TU NOMBRE AQUI"
+  - 
+  - Hecho con Unity.
+  - Inspirado en Undertale.
+  - 
+  - '> presiona X para volver_'
+  backgroundColor: {r: 0.02, g: 0.03, b: 0.08, a: 1}
+  codeColor: {r: 0.25, g: 1, b: 0.45, a: 1}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  selectedColor: {r: 1, g: 0.92, b: 0.2, a: 1}
+  heartColor: {r: 0.9, g: 0.1, b: 0.15, a: 1}
+  rainColor: {r: 0.2, g: 1, b: 0.4, a: 0.22}
+  scanlineAlpha: 0.22
+  bootCharDelay: 0.02
+  boxAnimDuration: 0.12
+  fadeOutDuration: 0.7
+  showGuide: 0
+  guideSprite: {fileID: 0}
+  guidePosition: {x: -470, y: 10}
+  guideSize: {x: 0, y: 0}
+  music: {fileID: 8300000, guid: 2fbc10b7d5822a14aa4a537055c1aca6, type: 3}
+  musicVolume: 0.5
+--- !u!114 &1169547724
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1169547712}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f76b06b1216af545b36f18ce7815f63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  startMenu: {fileID: 0}
+  levelMusic: {fileID: 8300000, guid: a0abfb5d6b26ad0469ac114f384f34f0, type: 3}
+  levelVolume: 0.4
+  fadeInDuration: 0.8
+  fadeOutDuration: 0.5
+  guideDuckFactor: 0
+  pauseVolumeFactor: 0.35
+  pauseLowPassHz: 900
+  pauseFadeDuration: 0.25
+  rewindVolumeFactor: 0.35
+  rewindPitch: 0.65
+  rewindLowPassHz: 2000
+  rewindFadeDuration: 0.25
 --- !u!1 &1286255127
 GameObject:
   m_ObjectHideFlags: 0

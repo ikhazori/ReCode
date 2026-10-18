@@ -56,6 +56,8 @@ public class LevelManager : MonoBehaviour
     [Tooltip("Se busca solo. Se usa para cortar de golpe la estatica/destellos si saltas de nivel a mitad de un efecto (ej. desde el menu de pausa).")]
     public ScreenEffects effects;
     public AnimatedBackground background;
+    [Tooltip("Fragmentos y terminales que se agregan a cada nivel. Se busca solo; si no existe en la escena, los niveles quedan como antes.")]
+    public LevelExtras extras;
 
     [Header("Capitulos y niveles, en orden")]
     public List<ChapterData> chapters = new List<ChapterData>
@@ -194,6 +196,7 @@ public class LevelManager : MonoBehaviour
         if (canvas == null) canvas = FindFirstObjectByType<Canvas>();
         if (effects == null) effects = FindFirstObjectByType<ScreenEffects>();
         if (background == null) background = FindFirstObjectByType<AnimatedBackground>();
+        if (extras == null) extras = FindFirstObjectByType<LevelExtras>();
 
         if (runner != null) runner.OnLevelComplete.AddListener(OnLevelWon);
 
@@ -306,6 +309,7 @@ public class LevelManager : MonoBehaviour
         yield return ShowLabel(chapters[chapterIndex].name.ToUpper() + " - NIVEL " + (levelIndex + 1), data.name);
 
         level.LoadLevel(data);
+        if (extras != null) extras.BuildFor(chapterIndex, levelIndex); // fragmentos y terminales de este nivel
         if (queue != null)
         {
             queue.maxInstructions = data.maxInstructions;
